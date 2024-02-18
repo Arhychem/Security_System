@@ -38,8 +38,6 @@ File imageFile;
 
 //Pour la sérialisation
 DynamicJsonDocument jsonMessage(1024);
-DynamicJsonDocument outgoingJsonMessage(1024);
-String outgoingMessage = "";
 String imagesFolder = "/espImages";
 
 WiFiServer server(80);
@@ -58,6 +56,7 @@ bool taskCompleted = false;
 //Serveur NTP
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org", 3600, 60000);  // Le décalage est en secondes (3600 pour GMT+1)
+String timestampToDateString(unsigned long timestamp);
 String date;
 
 void fcsUploadCallback(FCS_UploadStatusInfo info);
@@ -84,8 +83,8 @@ void setup() {
   Serial.println(WiFi.localIP());
   //Activation du timeClient
   timeClient.begin();
-  /* timeClient.update();
-  date = timestampToDateString(timeClient.getEpochTime());
+  
+  /*
   lcd.clear();
   lcd.setCursor(0, 1);
   Serial.println(date); */
@@ -118,12 +117,11 @@ void setup() {
 }
 
 void loop() {
-  timeClient.update();
+  if(!timeClient.forceUpdate()){
+    Serial.println("Échec de mise à jour du client NTP")
+  }
+  
   date = timestampToDateString(timeClient.getEpochTime());
-  /* lcd.clear();
-  lcd.setCursor(0, 1);
-  Serial.println(date);
-  lcd.print(date); */
   WiFiClient client = server.available();
   if (Serial.available() > 0) {
     command = Serial.readStringUntil('\n');
@@ -169,10 +167,9 @@ void loop() {
           Serial.println("date");
           String image = imagesFolder + "/" + date + ".jpeg";
           Serial.println(image);
-          Serial.println(image);
           imageFile = SD.open(image, FILE_WRITE);
           if (!imageFile) {
-            Serial.println("Échec de l'ouverture du fichier sur la carte SD");
+            Serial.println("Échec de l'ouverture du fichier image sur la carte SD");
             client.stop();
             return;
           }
@@ -194,6 +191,7 @@ void loop() {
             Serial.print("Taille restante: ");
             Serial.println(imageSize);
             if (imageSize == 0) {
+              imageFile.close();
               Serial.println("Image recues avec succès");
               Serial.println(Firebase.ready());
               Serial.println(!taskCompleted);
@@ -208,8 +206,33 @@ void loop() {
                 } else {
                   Serial.println(fbdo.errorReason());
                 }
+                /*
+                *Envoi du fichier texte sur le firebase storage
+                */
+                FirebaseJson content;
+                content.set("description", "Nous avons détecté une intrusion dans la zone 1");
+                content.set("timestamp", date);
+                content.set("url", date + +".jpeg");
+                content.set("userId", USER_UID);
+                String jsonString;
+                content.toString(jsonString, true);
+                String text = imagesFolder + "/" + date + ".txt";
+                destination = "/DonneesIntrusions/" + String(USER_UID) + "/" + date + ".txt";
+                File textFile = SD.open(text, FILE_WRITE);
+                if (!textFile) {
+                  Serial.println("Échec de l'ouverture du fichier texte sur la carte SD");
+                  client.stop();
+                  return;
+                }
+                textFile.println(jsonString);
+                textFile.close();
+                if (Firebase.Storage.upload(&fbdo, STORAGE_BUCKET_ID /* Firebase Storage bucket id */, text /* path to local file */, mem_storage_type_sd /* memory storage type, mem_storage_type_flash and mem_storage_type_sd */, destination /* path of remote file stored in the bucket */, "text/txt" /* mime type */, fcsUploadCallback)) {
+                  Serial.printf("\nDownload URL: %s\n", fbdo.downloadURL().c_str());
+                } else {
+                  Serial.println(fbdo.errorReason());
+                }
               }
-              if (Firebase.ready() && (millis() - dataMillis > 60000 || dataMillis == 0)) {
+              /* if (Firebase.ready() && (millis() - dataMillis > 60000 || dataMillis == 0)) {
                 dataMillis = millis();
                 Serial.println("1");
                 FirebaseJson content;
@@ -226,9 +249,10 @@ void loop() {
                 Serial.println(content.raw());
 
                 Serial.println("7");
-              }
+              } */
             }
           }
+          jsonMessage.clear();
           Serial.println("sortie1");
         }
         // Ouvrir un fichier pour écrire les données d'image
