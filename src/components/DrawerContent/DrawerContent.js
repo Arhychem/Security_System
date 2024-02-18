@@ -24,6 +24,7 @@ const DrawerList = [
   {icon: 'running', label: 'Intrusion la plus récente', navigateTo: 'RecentIntrusion'},
   {icon: 'exclamation-triangle', label: 'Afficher toutes les intrusions', navigateTo: 'AllIntrusions'},
   {icon: 'cog', label: 'Configurer le système', navigateTo: 'ConfigSystem'},
+  {icon: 'play-circle', label: 'Streaming', navigateTo: 'Streaming'},
 ];
 const DrawerLayout = ({icon, label, navigateTo}) => {
   const navigation = useNavigation();

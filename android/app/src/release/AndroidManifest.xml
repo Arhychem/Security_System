@@ -21,4 +21,10 @@
             android:value="AIzaSyAq2KK7ZJksUc75vaI4PZgJdb1GeaC8UY0"
         />
     </application>
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https"/>
+        </intent>
+    </queries>
 </manifest>
