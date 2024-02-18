@@ -43,7 +43,7 @@ firebase.initializeApp({
 
 const EMAIL_REGEX =  /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/
 
-
+const logo=require('../../../assets/R.png')
 
 const SignInScreen = () => {
     
@@ -56,8 +56,6 @@ const SignInScreen = () => {
       watch,
       formState: {errors},
     } = useForm()
-
-    const [downloadUrl, setDownloadUrl] = useState(null);
 
     const [isAdmin, setIsAdmin] = useState(false);
 
@@ -78,14 +76,6 @@ const SignInScreen = () => {
   
       // Nettoyage de l'abonnement lors du démontage du composant
       return unsubscribe;
-    }, []);
-
-    useEffect(() => {
-      async function fetchImage() {
-        const url = await storage().ref('assets/images/R.png').getDownloadURL();
-        setDownloadUrl(url);
-      }
-      fetchImage();
     }, []);
     const onForgotPressed = () =>{
       navigation.navigate("ForgotPassword")
@@ -182,11 +172,11 @@ const CheckEmail = async (email) =>{
     )}
         <View style={styles.root}>
         <Text style={styles.title}>Sign In</Text>
-          {downloadUrl && <Image source={{ uri: downloadUrl }} 
+           <Image source={logo} 
           
             style={[styles.logo, {height: height * 0.15, margin: 1}]} 
             resizeMode="contain"
-          />}
+          />
            <CustomInput
             name="email"
             placeholder = "Email"
