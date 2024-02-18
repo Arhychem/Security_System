@@ -42,38 +42,43 @@ if(!firebase.apps.length){
   const RecentIntrusion = () => {
     const [isLoading, setIsLoading] = useState(false)
     const [reload, setReload] = useState(false)
-    function deleteRequest(request, index){
-      setIsLoading(true)
-      console.log("supprimer")
-      console.log("voici la request:",request)
-      const db = firebase.firestore();
-      const collectionRef = db.collection("requetes");
+    function deleteRequest(request, index) {
+      setIsLoading(true);
+      const storageRef = firebase.storage().ref(`DonneesIntrusions/${auth().currentUser.uid}/`);
     
-      collectionRef.get().then((querySnapshot) => {
-        querySnapshot.forEach((doc) => {
-        console.log("doc.data().userId: ",doc.data().userId)
-        console.log("auth().currentUser.uid",auth().currentUser.uid)
-        console.log("doc.data().timestamp",doc.data().timestamp)
-        console.log("request.timestamp",request.timestamp)
-       
-          if (doc.data().userId == auth().currentUser.uid && doc.data().timestamp.isEqual(request.timestamp)) {
-            console.log("yo")
-            doc.ref.delete().then(() => {
-              setIsLoading(false)
-              // Le document a été supprimé avec succès
-              Alert.alert("Le document a été supprimé avec succès.");
-              setReload(true)
-              setReload(false)
-            }).catch((error) => {
-              // Une erreur s'est produite lors de la suppression du document
-              setIsLoading(false)
-              console.error("Erreur lors de la suppression du document :", error);
+      storageRef.listAll()
+        .then(async (filesList) => {
+          const deletePromises = filesList.items.map(async (fileRef) => {
+            if (fileRef.name.endsWith(".txt")) {
+              const fileUrl = await fileRef.getDownloadURL();
+              const fileContent = await fetch(fileUrl).then((response) => response.json());
+              if (fileContent.userId === auth().currentUser.uid && fileContent.url === request.url) {
+                console.log("yo")
+                return fileRef.delete();
+              }
+            }
+          });
+    
+          Promise.all(deletePromises)
+            .then(() => {
+              setIsLoading(false);
+              // Les fichiers ont été supprimés avec succès
+              Alert.alert("Les fichiers ont été supprimés avec succès.");
+              setReload(true);
+              setReload(false);
+            })
+            .catch((error) => {
+              // Une erreur s'est produite lors de la suppression des fichiers
+              setIsLoading(false);
+              console.error("Erreur lors de la suppression des fichiers :", error);
             });
-          }
+        })
+        .catch((error) => {
+          // Une erreur s'est produite lors de la récupération de la liste des fichiers
+          setIsLoading(false);
+          console.error("Erreur lors de la récupération de la liste des fichiers :", error);
         });
-      });
-      setIsLoading(false)
-    };
+    }
     const {height} = useWindowDimensions();
     const navigation = useNavigation();
    // const {signIn,  signOut,signUp, user,setUser} = useContext(AuthContext)

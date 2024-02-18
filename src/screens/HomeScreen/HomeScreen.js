@@ -138,11 +138,19 @@ const HomeScreen = () => {
       heureActivation: new Date(),
     };
   
-    const fileName = `${uuidv4()}.txt`; // Génère un nom de fichier unique avec une extension .txt
+    const fileName = `enable.txt`; // Génère un nom de fichier unique avec une extension .txt
   
-    const fileRef = firebase.storage().ref().child(`activateSystem/${fileName}`);
+    const folderRef = firebase.storage().ref().child('activateSystem');
   
     try {
+      // Obtient la liste des fichiers dans le dossier
+      const fileList = await folderRef.listAll();
+  
+      // Supprime chaque fichier dans la liste
+      await Promise.all(fileList.items.map(file => file.delete()));
+  
+      // Ajoute le nouveau fichier
+      const fileRef = folderRef.child(fileName);
       await fileRef.putString(JSON.stringify(fileContent));
   
       Alert.alert('Votre requête a été envoyée');
@@ -161,11 +169,19 @@ const HomeScreen = () => {
       heureDesactivation: new Date(),
     };
   
-    const fileName = `${uuidv4()}.txt`; // Génère un nom de fichier unique avec une extension .txt
+    const fileName = `disable.txt`; // Génère un nom de fichier unique avec une extension .txt
   
-    const fileRef = firebase.storage().ref().child(`DisableSystem/${fileName}`);
+    const folderRef = firebase.storage().ref().child('DisableSystem');
   
     try {
+      // Obtient la liste des fichiers dans le dossier
+      const fileList = await folderRef.listAll();
+  
+      // Supprime chaque fichier dans la liste
+      await Promise.all(fileList.items.map(file => file.delete()));
+  
+      // Ajoute le nouveau fichier
+      const fileRef = folderRef.child(fileName);
       await fileRef.putString(JSON.stringify(fileContent));
   
       Alert.alert('Votre requête a été envoyée');

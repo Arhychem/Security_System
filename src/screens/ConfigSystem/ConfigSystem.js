@@ -46,15 +46,23 @@ const ConfigSystem = () => {
     const fileContent = {
       userId: auth().currentUser.uid,
       heureDebut: new Date(),
-      heureFin:  moment('31/12/2024 00:00:00', 'DD/MM/YYYY HH:mm:ss').format('YYYY-MM-DDTHH:mm:ss.SSS[Z]'),
+      heureFin: moment('31/12/2024 00:00:00', 'DD/MM/YYYY HH:mm:ss').format('YYYY-MM-DDTHH:mm:ss.SSS[Z]'),
       heureFin: selectedDateTimeEnd,
     };
   
-    const fileName = `${uuidv4()}.txt`; // Génère un nom de fichier unique avec une extension .txt
+    const fileName = `config.txt`; // Génère un nom de fichier unique avec une extension .txt
   
-    const fileRef = firebase.storage().ref().child(`configs/${fileName}`);
+    const folderRef = firebase.storage().ref().child('configs');
   
     try {
+      // Obtient la liste des fichiers dans le dossier
+      const fileList = await folderRef.listAll();
+  
+      // Supprime chaque fichier dans la liste
+      await Promise.all(fileList.items.map(file => file.delete()));
+  
+      // Ajoute le nouveau fichier
+      const fileRef = folderRef.child(fileName);
       await fileRef.putString(JSON.stringify(fileContent));
   
       Alert.alert('Votre requête a été envoyée');
@@ -90,16 +98,24 @@ const ConfigSystem = () => {
   
     const fileContent = {
       userId: auth().currentUser.uid,
-      DateModification: moment(firebase.firestore.FieldValue.serverTimestamp()).toDate(),
+      DateModification: new Date(),
       heureDebut: selectedDateTimeBegin,
       heureFin: selectedDateTimeEnd,
     };
   
-    const fileName = `${uuidv4()}.txt`; // Génère un nom de fichier unique avec une extension .txt
+    const fileName = `config.txt`; // Génère un nom de fichier unique avec une extension .txt
   
-    const fileRef = firebase.storage().ref().child(`configs/${fileName}`);
+    const folderRef = firebase.storage().ref().child('configs');
   
     try {
+      // Obtient la liste des fichiers dans le dossier
+      const fileList = await folderRef.listAll();
+  
+      // Supprime chaque fichier dans la liste
+      await Promise.all(fileList.items.map(file => file.delete()));
+  
+      // Ajoute le nouveau fichier
+      const fileRef = folderRef.child(fileName);
       await fileRef.putString(JSON.stringify(fileContent));
   
       Alert.alert('Votre requête a été envoyée');
