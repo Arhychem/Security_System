@@ -55,7 +55,7 @@ bool taskCompleted = false;
 
 //Serveur NTP
 WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP, "pool.ntp.org", 3600, 60000);  // Le décalage est en secondes (3600 pour GMT+1)
+NTPClient timeClient(ntpUDP, "europe.pool.ntp.org", 3600, 60000);
 String timestampToDateString(unsigned long timestamp);
 String date;
 
@@ -83,7 +83,7 @@ void setup() {
   Serial.println(WiFi.localIP());
   //Activation du timeClient
   timeClient.begin();
-  
+
   /*
   lcd.clear();
   lcd.setCursor(0, 1);
@@ -117,11 +117,15 @@ void setup() {
 }
 
 void loop() {
-  if(!timeClient.forceUpdate()){
-    Serial.println("Échec de mise à jour du client NTP")
-  }
-  
-  date = timestampToDateString(timeClient.getEpochTime());
+  /*if(!timeClient.update()){
+    Serial.println("Échec de mise à jour du client NTP");
+  }*/
+  timeClient.update();
+  unsigned long seconds = timeClient.getEpochTime();
+  date = timestampToDateString(seconds);
+  /* Serial.println(timeClient.getFormattedTime());
+  Serial.println(seconds);
+  Serial.println(date); */
   WiFiClient client = server.available();
   if (Serial.available() > 0) {
     command = Serial.readStringUntil('\n');
@@ -158,6 +162,7 @@ void loop() {
           return;
         }
         String action = jsonMessage["action"];
+        String ipAdress = jsonMessage["ip"];
         if (action == "imageEsp") {
           /*Traitement de la reception de l'image*/
           String filename = jsonMessage["filename"];
@@ -201,7 +206,12 @@ void loop() {
                 destination = "/images/" + String(USER_UID) + "/" + date + ".jpeg";
                 // MIME type should be valid to avoid the download problem.
                 // The file systems for flash and SD/SDMMC can be changed in FirebaseFS.h.
-                if (Firebase.Storage.upload(&fbdo, STORAGE_BUCKET_ID /* Firebase Storage bucket id */, image /* path to local file */, mem_storage_type_sd /* memory storage type, mem_storage_type_flash and mem_storage_type_sd */, destination /* path of remote file stored in the bucket */, "image/jpeg" /* mime type */, fcsUploadCallback)) {
+                if (Firebase.Storage.upload(&fbdo, STORAGE_BUCKET_ID /* Firebase Storage bucket id */,
+                                            image /* path to local file */,
+                                            mem_storage_type_sd /* memory storage type, mem_storage_type_flash and mem_storage_type_sd */,
+                                            destination /* path of remote file stored in the bucket */,
+                                            "image/jpeg" /* mime type */,
+                                            fcsUploadCallback)) {
                   Serial.printf("\nDownload URL: %s\n", fbdo.downloadURL().c_str());
                 } else {
                   Serial.println(fbdo.errorReason());
@@ -211,7 +221,7 @@ void loop() {
                 */
                 FirebaseJson content;
                 content.set("description", "Nous avons détecté une intrusion dans la zone 1");
-                content.set("timestamp", date);
+                content.set("timestamp", seconds);
                 content.set("url", date + +".jpeg");
                 content.set("userId", USER_UID);
                 String jsonString;
@@ -226,30 +236,18 @@ void loop() {
                 }
                 textFile.println(jsonString);
                 textFile.close();
-                if (Firebase.Storage.upload(&fbdo, STORAGE_BUCKET_ID /* Firebase Storage bucket id */, text /* path to local file */, mem_storage_type_sd /* memory storage type, mem_storage_type_flash and mem_storage_type_sd */, destination /* path of remote file stored in the bucket */, "text/txt" /* mime type */, fcsUploadCallback)) {
+                if (Firebase.Storage.upload(&fbdo, STORAGE_BUCKET_ID /* Firebase Storage bucket id */,
+                                            text /* path to local file */,
+                                            mem_storage_type_sd /* memory storage type, mem_storage_type_flash and mem_storage_type_sd */,
+                                            destination /* path of remote file stored in the bucket */,
+                                            "text/txt" /* mime type */,
+                                            fcsUploadCallback)) {
                   Serial.printf("\nDownload URL: %s\n", fbdo.downloadURL().c_str());
                 } else {
                   Serial.println(fbdo.errorReason());
                 }
+                taskCompleted = false;
               }
-              /* if (Firebase.ready() && (millis() - dataMillis > 60000 || dataMillis == 0)) {
-                dataMillis = millis();
-                Serial.println("1");
-                FirebaseJson content;
-
-                String documentPath = "requetes/";  //+ String(count);
-                Serial.println("2");
-                content.set("test", "Hello");
-                count++;
-                Serial.println("3");
-
-                Serial.print("Create a document... ");
-                Serial.println("4");
-                Serial.println(documentPath.c_str());
-                Serial.println(content.raw());
-
-                Serial.println("7");
-              } */
             }
           }
           jsonMessage.clear();

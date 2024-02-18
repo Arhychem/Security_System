@@ -42,7 +42,7 @@ client.connect(serverPort, serverHost, () => {
               action: "imageEsp",
               filename: file,
               size: data.length,
-              id: "1",
+              ip: "192.168.2.124",
               date: "10/02/2024 22h30",
             }) + "\n";
           client.write(header);
