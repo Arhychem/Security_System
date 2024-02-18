@@ -225,6 +225,13 @@ void loop() {
                 Serial.println(documentPath.c_str());
                 Serial.println(content.raw());
 
+                if (Firebase.Firestore.createDocument(&fbdo, FIREBASE_PROJECT_ID, "" /* databaseId can be (default) or empty */, documentPath.c_str(), content.raw())) {
+                  Serial.printf("ok\n%s\n\n", fbdo.payload().c_str());
+                  Serial.println("5");
+                } else {
+                  Serial.println("6");
+                  Serial.println(fbdo.errorReason());
+                }
                 Serial.println("7");
               }
             }
