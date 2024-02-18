@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "82701150011",
+    "project_id": "reactnative-62063",
+    "storage_bucket": "reactnative-62063.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:82701150011:android:0b04c34b6307930e3eb91e",
+        "android_client_info": {
+          "package_name": "com.securealertapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "82701150011-h8ar5cvg2lpkgnlk4haaljaqnh3drbu8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.securealertapp",
+            "certificate_hash": "76d2b825ae21108c30e164dd0dbe30b3d5474e16"
+          }
+        },
+        {
+          "client_id": "82701150011-6ra7l63mfrg3ifa41cq7bmhq2270afpe.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAapO7zInKxG2RTDezZOPs6uTyvmCtSiJI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "82701150011-6ra7l63mfrg3ifa41cq7bmhq2270afpe.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
