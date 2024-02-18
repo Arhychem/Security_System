@@ -11,9 +11,11 @@
     * - Modification    : 
 **/
 import React, { useContext, useEffect, useState, useRef } from 'react';
-import { Text, TextInput, Image, View, StyleSheet, Pressable, ScrollView, TouchableOpacity } from 'react-native';
+import { Text, TextInput, Image, View, StyleSheet, Pressable, Modal, Alert } from 'react-native';
 import firebase from '@react-native-firebase/app'
 import auth from '@react-native-firebase/auth'
+import moment from 'moment';
+import { v4 as uuidv4 } from 'uuid'; // Importez la bibliothèque UUID pour générer un nom de fichier unique
 import { AuthContext } from '../../components/AuthProvider/AuthProvider';
 import CustomButton from '../../components/CustomButton/CustomButton';
 import { useNavigation } from '@react-navigation/native';
@@ -91,6 +93,7 @@ if(!firebase.apps.length){
   const iconActive = "#efe";
 
 const HomeScreen = () => {
+  const [isLoading, setIsLoading] = useState(false)
   console.log(auth())
   const [downloadUrl, setDownloadUrl] = useState(null);
   useEffect(() => {
@@ -126,15 +129,64 @@ const HomeScreen = () => {
   const onConfigureSystemPress = ()=>{
     navigation.navigate("ConfigSystem")
   }
-  const activeSystem = () =>{
-    console.log('active')
-  }
-  const desactiveSystem = () => {
-    console.log("desactive")
-  }
+  const activeSystem = async () => {
+    setIsLoading(true);
+  
+    const fileContent = {
+      userId: auth().currentUser.uid,
+      DateModification: moment(firebase.firestore.FieldValue.serverTimestamp()).toDate(),
+      heureActivation: new Date(),
+    };
+  
+    const fileName = `${uuidv4()}.txt`; // Génère un nom de fichier unique avec une extension .txt
+  
+    const fileRef = firebase.storage().ref().child(`activateSystem/${fileName}`);
+  
+    try {
+      await fileRef.putString(JSON.stringify(fileContent));
+  
+      Alert.alert('Votre requête a été envoyée');
+    } catch (error) {
+      console.error('Erreur lors du stockage du fichier :', error);
+    }
+  
+    setIsLoading(false);
+  };
+  const desactiveSystem = async () => {
+    setIsLoading(true);
+  
+    const fileContent = {
+      userId: auth().currentUser.uid,
+      DateModification: moment(firebase.firestore.FieldValue.serverTimestamp()).toDate(),
+      heureDesactivation: new Date(),
+    };
+  
+    const fileName = `${uuidv4()}.txt`; // Génère un nom de fichier unique avec une extension .txt
+  
+    const fileRef = firebase.storage().ref().child(`DisableSystem/${fileName}`);
+  
+    try {
+      await fileRef.putString(JSON.stringify(fileContent));
+  
+      Alert.alert('Votre requête a été envoyée');
+    } catch (error) {
+      console.error('Erreur lors du stockage du fichier :', error);
+    }
+  
+    setIsLoading(false);
+  };
   const listItems=[{iconName: "power-off", label:"Activer le système", color:'white', onPress:activeSystem }, {iconName:"power-off", label:"Désactiver le système", color: 'red', onPress:desactiveSystem}]
   return (
    <> 
+   {isLoading && (
+     <Modal visible={true} transparent animationType="fade">
+       <View style={styles.modalContainer}>
+         <View style={styles.modalContent}>
+           <Text>Chargement...</Text>
+         </View>
+       </View>
+     </Modal>
+   )}
     {auth().currentUser && <Text style={styles.title}>{auth().currentUser.displayName}, Bienvenue sur Secure Alert</Text>}
     <View className="flex-1 bg-white" style={{ alignItems: 'center',
         width: '100%',
@@ -270,6 +322,19 @@ const styles=StyleSheet.create({
     },
     iconStyle: {
         margin: 4,
+    },
+    modalContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    modalContent: {
+      backgroundColor: 'white',
+      padding: 20,
+      borderRadius: 5,
+      maxHeight: 200,
+      width: 300,
     },
 })
 export default HomeScreen;
