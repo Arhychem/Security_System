@@ -82,24 +82,47 @@ if(!firebase.apps.length){
     const [imageUrls, setImageUrls] = useState([]);
     useEffect(
       () => {
-      const db = firebase.firestore();
-      const collectionRef = db.collection("requetes");
-      collectionRef.get().then((querySnapshot) => {
-        const requests = [];
-        console.log("querysnapshot",querySnapshot)
-        querySnapshot.forEach((doc) => {
-          console.log(auth().currentUser)
-          if(auth().currentUser){
-            if(doc.data().userId == auth().currentUser.uid){
-              requests.push(doc.data());
-            }
+        const fetchFilesFromStorage = async (folderPath) => {
+          const storageRef = firebase.storage().ref(folderPath);
+    
+          try {
+            // Récupérez la liste des fichiers dans le dossier
+            const filesList = await storageRef.listAll();
+            console.log(filesList)
+            // Tableau pour stocker les objets des fichiers
+            const requests = [];
+    
+            // Parcourez chaque fichier et récupérez son contenu
+            await Promise.all(
+              filesList.items.map(async (fileRef) => {
+                const fileUrl = await fileRef.getDownloadURL();
+                const fileContent = await fetch(fileUrl).then((response) =>
+                  response.json()
+                );
+                const timestamp = new Date(parseInt(fileContent.timestamp, 10)*1000); // Convertir en entier
+                requests.push({
+                  userId: fileContent.userId,
+                  description: fileContent.description,
+                  url: fileContent.url,
+                  timestamp: timestamp,
+                });
+              })
+            );
+    
+            setRequests(requests);
+          } catch (error) {
+            console.error('Erreur lors de la récupération des fichiers :', error);
           }
-        });
+        };
+        if(auth().currentUser){
+          const folderPath = `DonneesIntrusions/${auth().currentUser.uid}/`;
+          fetchFilesFromStorage(folderPath);
+        }
         console.log("avant :", requests)
         requests.sort((a, b) => b.timestamp.seconds - a.timestamp.seconds)
         console.log(requests)
         for(let i=0;i<requests.length;i++){
-        const storageRef = storage().ref(`images/${requests[i].userId}/${requests[i].url}.png`);
+        const storageRef = storage().ref(`images/${requests[i].userId}/${requests[i].url}`);
         promises.push(storageRef.getDownloadURL());
         Promise.all(promises)
           .then(urls => {
@@ -110,11 +133,6 @@ if(!firebase.apps.length){
           });
         }
           setRequests(requests);
-      }).catch((error) => {
-        console.error('Erreur lors de la récupération des documents :', error);
-        setRequests([]);
-      });
-      
     }, [reload]);  
     useEffect(() => {
       const interval = setInterval(() => {
@@ -141,7 +159,7 @@ if(!firebase.apps.length){
           <View key={index} style={styles.block}>
             <Text style={styles.title}>Intrusion no {index + 1}</Text>
             <Text style={styles.description}>{request.description}</Text>
-            <Text style={styles.subtitle}>Date: {(moment((request.timestamp).toDate())).format('DD MMMM YYYY: HH[h]mm')}</Text>
+            <Text style={styles.subtitle}>Date: {(moment((request.timestamp))).format('DD MMMM YYYY: HH[h]mm')}</Text>
             {imageUrls[index]? (<Image source={{ uri: imageUrls[index]}} 
             style={[styles.logo, {height: height * 0.3}]} 
             resizeMode="contain"
