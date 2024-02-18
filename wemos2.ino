@@ -1,17 +1,42 @@
+/*Pour la connexion WiFi */
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
+/*Pour la connexion de la carte SD */
 #include <SD.h>
-#include "credential.h"
-#include "ArduinoJson.h"
 #include <SPI.h>
-#include <algorithm>
+/*Pour la connexion et la communication avec firebase*/
 #include <Firebase_ESP_Client.h>
 #include <addons/TokenHelper.h>
+/*Pour obtenir l'heure en ligne */
+#include <NTPClient.h>
+#include <WiFiUdp.h>
+/*Pour utiliser certaines fonctions */
+#include <algorithm>
+#include <ctime>
+
+/*Pour l'écran LCD*/
+#include <LiquidCrystal_I2C.h>
+#include <Wire.h>
+
+#if defined(ARDUINO) && ARDUINO >= 100
+#define printByte(args) write(args);
+#else
+#define printByte(args) print(args, BYTE);
+#endif
+
+/*Les fichiers inclus
+*credential.h qui contient les informations sensibles de connexion
+*ArduinoJson.h pour la sérialisation et la désérialisation des données en Json
+*/
+#include "credential.h"
+#include "ArduinoJson.h"
 
 const char *ssid = SSID;
 const char *password = PASS;
 File root;
 File imageFile;
+
+//Pour la sérialisation
 DynamicJsonDocument jsonMessage(1024);
 DynamicJsonDocument outgoingJsonMessage(1024);
 String outgoingMessage = "";
@@ -24,34 +49,53 @@ String command;
 FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig configF;
+String destination;
+unsigned long dataMillis = 0;
+int count = 0;
 
 bool taskCompleted = false;
 
-// use classic HTTP GET and POST requests
+//Serveur NTP
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, "pool.ntp.org", 3600, 60000);  // Le décalage est en secondes (3600 pour GMT+1)
+String date;
 
 void fcsUploadCallback(FCS_UploadStatusInfo info);
 
+//Initialisation écran
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
 void setup() {
   Serial.begin(115200);
+  lcd.init();
+  lcd.backlight();
+  lcd.home();
   WiFi.begin(ssid, password);
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print("+");
   }
-
+  lcd.print("----CONNECTED----");
   Serial.println("");
   Serial.print("Connecté à ");
   Serial.println(ssid);
   Serial.print("Adresse IP: ");
   Serial.println(WiFi.localIP());
+  //Activation du timeClient
+  timeClient.begin();
+  /* timeClient.update();
+  date = timestampToDateString(timeClient.getEpochTime());
+  lcd.clear();
+  lcd.setCursor(0, 1);
+  Serial.println(date); */
 
-  if (!SD.begin(4)) {  // Assurez-vous que la broche CS est correcte pour votre configuration
+  //Initialidation de la carte SD
+  if (!SD.begin(4)) {
     Serial.println("Échec de l'initialisation de la carte SD");
     return;
   }
   Serial.println("initialisation done");
-  // SD.rmdir(imagesFolder);
   if (!SD.exists(imagesFolder)) {
     if (!SD.mkdir(imagesFolder)) {
       Serial.println("Erreur création de dossier");
@@ -62,7 +106,7 @@ void setup() {
 
   root = SD.open("/");
   server.begin();
-  // Firebase Init
+  // Firebase Initialisation
   configF.api_key = FIREBASE_API_KEY;
   auth.user.email = USER_EMAIL;
   auth.user.password = USER_PASSWORD;
@@ -70,9 +114,16 @@ void setup() {
   configF.token_status_callback = tokenStatusCallback;
   Firebase.begin(&configF, &auth);
   Firebase.reconnectWiFi(true);
+  configF.fcs.upload_buffer_size = 512;
 }
 
 void loop() {
+  timeClient.update();
+  date = timestampToDateString(timeClient.getEpochTime());
+  /* lcd.clear();
+  lcd.setCursor(0, 1);
+  Serial.println(date);
+  lcd.print(date); */
   WiFiClient client = server.available();
   if (Serial.available() > 0) {
     command = Serial.readStringUntil('\n');
@@ -100,6 +151,8 @@ void loop() {
 
         String incommingMessage = client.readStringUntil('\n');
         Serial.print(incommingMessage);
+        fbdo.setBSSLBufferSize(4096, 1024);
+        fbdo.setResponseSize(2048);
         DeserializationError err = deserializeJson(jsonMessage, incommingMessage);
         if (err) {
           Serial.println("ERROR: ");
@@ -108,17 +161,16 @@ void loop() {
         }
         String action = jsonMessage["action"];
         if (action == "imageEsp") {
+          /*Traitement de la reception de l'image*/
           String filename = jsonMessage["filename"];
           size_t imageSize = jsonMessage["size"];
           int i = 0;
           // imageFile = SD.open(imagesFolder + "/" + filename, FILE_WRITE);
-          String image = "/" + filename;
+          Serial.println("date");
+          String image = imagesFolder + "/" + date + ".jpeg";
+          Serial.println(image);
+          Serial.println(image);
           imageFile = SD.open(image, FILE_WRITE);
-          if (SD.exists(image)) {
-            Serial.println("présent111");
-          } else {
-            Serial.println("bad bad bad bad111");
-          }
           if (!imageFile) {
             Serial.println("Échec de l'ouverture du fichier sur la carte SD");
             client.stop();
@@ -148,29 +200,42 @@ void loop() {
               if (Firebase.ready() && !taskCompleted) {
                 taskCompleted = true;
                 Serial.print("Uploading picture... ");
-                if (SD.exists(image)) {
-                  Serial.println("présent");
-                } else {
-                  Serial.println("bad bad bad bad");
-                  printDirectory(root, 0);
-                }
+                destination = "/images/" + String(USER_UID) + "/" + date + ".jpeg";
                 // MIME type should be valid to avoid the download problem.
                 // The file systems for flash and SD/SDMMC can be changed in FirebaseFS.h.
-                if (Firebase.Storage.upload(&fbdo, STORAGE_BUCKET_ID /* Firebase Storage bucket id */, image /* path to local file */, mem_storage_type_flash /* memory storage type, mem_storage_type_flash and mem_storage_type_sd */, "/images/sdgsdgsdg/Moi 7.jpeg" /* path of remote file stored in the bucket */, "image/jpeg" /* mime type */, fcsUploadCallback)) {
+                if (Firebase.Storage.upload(&fbdo, STORAGE_BUCKET_ID /* Firebase Storage bucket id */, image /* path to local file */, mem_storage_type_sd /* memory storage type, mem_storage_type_flash and mem_storage_type_sd */, destination /* path of remote file stored in the bucket */, "image/jpeg" /* mime type */, fcsUploadCallback)) {
                   Serial.printf("\nDownload URL: %s\n", fbdo.downloadURL().c_str());
                 } else {
-                  if (SD.exists(image)) {
-                    Serial.println("présent");
-                  } else {
-                    Serial.println("bad bad bad bad");
-                    printDirectory(root, 0);
-                  }
                   Serial.println(fbdo.errorReason());
                 }
               }
+              if (Firebase.ready() && (millis() - dataMillis > 60000 || dataMillis == 0)) {
+                dataMillis = millis();
+                Serial.println("1");
+                FirebaseJson content;
+
+                String documentPath = "requetes/";  //+ String(count);
+                Serial.println("2");
+                content.set("test", "Hello");
+                count++;
+                Serial.println("3");
+
+                Serial.print("Create a document... ");
+                Serial.println("4");
+                Serial.println(documentPath.c_str());
+                Serial.println(content.raw());
+
+                if (Firebase.Firestore.createDocument(&fbdo, FIREBASE_PROJECT_ID, "" /* databaseId can be (default) or empty */, documentPath.c_str(), content.raw())) {
+                  Serial.printf("ok\n%s\n\n", fbdo.payload().c_str());
+                  Serial.println("5");
+                } else {
+                  Serial.println("6");
+                  Serial.println(fbdo.errorReason());
+                }
+                Serial.println("7");
+              }
             }
           }
-          imageFile.close();
           Serial.println("sortie1");
         }
         // Ouvrir un fichier pour écrire les données d'image
@@ -249,4 +314,13 @@ void fcsUploadCallback(FCS_UploadStatusInfo info) {
   } else if (info.status == firebase_fcs_upload_status_error) {
     Serial.printf("Upload failed, %s\n", info.errorMsg.c_str());
   }
+}
+
+// Définition de la fonction de conversion de timestamp en format DD-MM-YY hh:mm:ss
+String timestampToDateString(unsigned long timestamp) {
+  char buffer[80];
+  std::time_t seconds = static_cast<std::time_t>(timestamp);
+  std::tm *timeinfo = std::localtime(&seconds);
+  std::strftime(buffer, 80, "%d-%m-%y %H-%M-%S", timeinfo);
+  return String(buffer);
 }

@@ -6,7 +6,7 @@ const path = require("path");
 const imagesFolder = "./";
 console.log(imagesFolder);
 // Informations du serveur
-const serverHost = "192.168.79.132"; // Remplacez par l'adresse IP de votre serveur
+const serverHost = "192.168.3.132"; // Remplacez par l'adresse IP de votre serveur
 const serverPort = 80; // Remplacez par le port de votre serveur
 
 // Création du client TCP
