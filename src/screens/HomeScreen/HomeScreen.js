@@ -20,6 +20,7 @@ import { useNavigation } from '@react-navigation/native';
 import StatusBar from '../../components/StatusBar/StatusBar';
 import storage from '@react-native-firebase/storage';
 import Carousel from 'react-native-snap-carousel';
+import FontAwesome5Icon from 'react-native-vector-icons/FontAwesome5';
 import { BackHandler } from 'react-native';
 const items = [
   {
@@ -85,8 +86,12 @@ if(!firebase.apps.length){
     messagingSenderId: '82701150011 ',
   })
   }
+  const iconSize = 24;
+  const iconColor = "white";
+  const iconActive = "#efe";
 
 const HomeScreen = () => {
+  console.log(auth())
   const [downloadUrl, setDownloadUrl] = useState(null);
   useEffect(() => {
   const disableBackButtonHandler = BackHandler.addEventListener(
@@ -121,10 +126,13 @@ const HomeScreen = () => {
   const onConfigureSystemPress = ()=>{
     navigation.navigate("ConfigSystem")
   }
-  const affRequests = () =>{
-    navigation.navigate("AllIntrusions")
+  const activeSystem = () =>{
+    console.log('active')
   }
-  const listItems=[{iconName: "power-off", label:"Activer le système", color:'white' }, {iconName:"power-off", label:"Désactiver le système", color: 'red'}]
+  const desactiveSystem = () => {
+    console.log("desactive")
+  }
+  const listItems=[{iconName: "power-off", label:"Activer le système", color:'white', onPress:activeSystem }, {iconName:"power-off", label:"Désactiver le système", color: 'red', onPress:desactiveSystem}]
   return (
    <> 
     {auth().currentUser && <Text style={styles.title}>{auth().currentUser.displayName}, Bienvenue sur Secure Alert</Text>}
@@ -146,7 +154,36 @@ const HomeScreen = () => {
             loop
         />
     </View>
-            <StatusBar listItems={listItems}/>
+    <View style={styles.NavContainer}>
+      <View style={styles.NavBar}>
+        {listItems.map((item, index) => (
+          <View key={index}>
+            <Pressable
+              style={styles.IconBehave}
+              android_ripple={{ borderless: true, radius: 50 }}
+              onPress={item.onPress}
+            >
+              {item.color ? (
+                <FontAwesome5Icon 
+                name={item.iconName}
+                size={iconSize}
+                color={item.color}
+                style={styles.iconStyle}
+                 />
+              ) : (
+                <FontAwesome5Icon
+                  name={item.iconName}
+                  size={iconSize}
+                  color={iconActive}
+                  style={styles.iconStyle}
+                />
+              )}
+              <Text style={styles.textActive}>{item.label}</Text>
+            </Pressable>
+          </View>
+        ))}
+      </View>
+    </View>
   </>
   )
 }
@@ -207,6 +244,32 @@ const styles=StyleSheet.create({
       position: 'absolute',
       width: '100%',
       height: '100%',
+    },
+    NavContainer: {
+        position: 'absolute',
+        alignItems: 'center',
+        bottom: 0,
+    },
+    NavBar: {
+        flexDirection: 'row',
+        backgroundColor: '#5C80BC',
+        width: '100%',
+        justifyContent: 'space-evenly',
+        borderRadius: 40,
+        padding: 2
+    },
+    IconBehave: {
+        padding: 14,
+        alignItems: 'center'
+    },
+    text:{
+        color: 'white'
+    },
+    textActive:{
+        color: '#efe'
+    },
+    iconStyle: {
+        margin: 4,
     },
 })
 export default HomeScreen;

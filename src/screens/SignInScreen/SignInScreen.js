@@ -145,7 +145,6 @@ const CheckEmail = async (email) =>{
     const passw = watch('password').toString()
     console.log(passw)
     const response = await auth().signInWithEmailAndPassword(email,passw)
-    setUser(response.user)
     if(response.user.emailVerified==true){
       return true
     }else{
