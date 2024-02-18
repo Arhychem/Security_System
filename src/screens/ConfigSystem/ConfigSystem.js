@@ -22,6 +22,7 @@ import storage from '@react-native-firebase/storage';
 import DatePicker from 'react-native-date-picker'
 import FontAwesome5Icon from 'react-native-vector-icons/FontAwesome5';
 import moment from 'moment'
+import { v4 as uuidv4 } from 'uuid'; // Importez la bibliothèque UUID pour générer un nom de fichier unique
 //Initialize Firebase
 if(!firebase.apps.length){
   firebase.initializeApp({
@@ -39,17 +40,30 @@ const ConfigSystem = () => {
   const {height} = useWindowDimensions();
   const [hourBegin, setHourBegin] = useState(0);
   const [hourEnd, setHourEnd] = useState(0);
-  const autoConfig = () =>{
-    setIsLoading(true)
-    firebase.firestore().collection("configs").add({
+  const autoConfig = async () => {
+    setIsLoading(true);
+  
+    const fileContent = {
       userId: auth().currentUser.uid,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-      heureDebut: moment('01/01/2024 00:00:00', 'DD/MM/YYYY HH:mm:ss').format('ddd MMM DD YYYY HH:mm:ss [GMT]ZZ'),
-      heureFin: new Date(),
-     }) 
-    Alert.alert("Votre requête a été envoyée")
+      heureDebut: new Date(),
+      heureFin:  moment('31/12/2024 00:00:00', 'DD/MM/YYYY HH:mm:ss').format('YYYY-MM-DDTHH:mm:ss.SSS[Z]'),
+      heureFin: selectedDateTimeEnd,
+    };
+  
+    const fileName = `${uuidv4()}.txt`; // Génère un nom de fichier unique avec une extension .txt
+  
+    const fileRef = firebase.storage().ref().child(`configs/${fileName}`);
+  
+    try {
+      await fileRef.putString(JSON.stringify(fileContent));
+  
+      Alert.alert('Votre requête a été envoyée');
+    } catch (error) {
+      console.error('Erreur lors du stockage du fichier :', error);
+    }
+  
     setIsLoading(false);
-  }
+  };
   const [selectedDateTimeBegin, setSelectedDateTimeBegin] = useState(new Date());
   const [selectedDateTimeEnd, setSelectedDateTimeEnd] = useState(new Date());
   const [isLoading, setIsLoading] = useState(false)
@@ -71,19 +85,30 @@ const ConfigSystem = () => {
   const affRequests = () =>{
     navigation.navigate("AllIntrusions")
   }
-  const applyChange = () =>{
-    setIsLoading(true)
-    console.log("hourBegin: ",selectedDateTimeBegin)
-    console.log("hourEnd: ",selectedDateTimeEnd)
-    firebase.firestore().collection("configs").add({
+  const applyChange = async () => {
+    setIsLoading(true);
+  
+    const fileContent = {
       userId: auth().currentUser.uid,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+      DateModification: moment(firebase.firestore.FieldValue.serverTimestamp()).toDate(),
       heureDebut: selectedDateTimeBegin,
       heureFin: selectedDateTimeEnd,
-     })
-    Alert.alert("Votre requête a été envoyée")
+    };
+  
+    const fileName = `${uuidv4()}.txt`; // Génère un nom de fichier unique avec une extension .txt
+  
+    const fileRef = firebase.storage().ref().child(`configs/${fileName}`);
+  
+    try {
+      await fileRef.putString(JSON.stringify(fileContent));
+  
+      Alert.alert('Votre requête a été envoyée');
+    } catch (error) {
+      console.error('Erreur lors du stockage du fichier :', error);
+    }
+  
     setIsLoading(false);
-  }
+  };
   const listItems=[{iconName: "cog", label:"Configuration automatique"}]
   return (
    <> 
