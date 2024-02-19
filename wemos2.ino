@@ -4,6 +4,9 @@
 /*Pour la connexion de la carte SD */
 #include <SD.h>
 #include <SPI.h>
+/*Pour manipuler la mémoire flash*/
+#include <FS.h>
+#include <LittleFS.h>
 /*Pour la connexion et la communication avec firebase*/
 #include <Firebase_ESP_Client.h>
 #include <addons/TokenHelper.h>
@@ -59,8 +62,19 @@ bool taskCompleted = false;
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org", 3600, 60000);  // Le décalage est en secondes (3600 pour GMT+1)
 String date;
-
+/* 
+*
+*Protoypes de fonctions*/
+//callback de la fonction d'upload sur firebase
 void fcsUploadCallback(FCS_UploadStatusInfo info);
+//Fonctions de manipulation des fichiers de la mémoire Flash
+void deleteFile(const char *path);
+void renameFile(const char *path1, const char *path2);
+void appendFile(const char *path, const char *message);
+void writeFile(const char *path, const char *message);
+void readFile(const char *path);
+void listDir(const char *dirname);
+/* Fin prototypes*/
 
 //Initialisation écran
 LiquidCrystal_I2C lcd(0x27, 16, 2);
@@ -176,9 +190,15 @@ void loop() {
             client.stop();
             return;
           }
+          File imageInFlash = LittleFS.open(path,"w")
+          if (!imageInFlash) {
+            Serial.println("Échec de l'ouverture du fichier sur la mémoire flash");
+            client.stop();
+            return;
+          }
           byte buffer[BUFFER_SIZE];  // Taille du buffer à ajuster selon la mémoire disponible
           while (imageSize > 0)
-          // Lexture des données d'image et écriture dans le fichier
+          // Lexture des données d'image et écriture du fichier sur la carte SD
           {
             int len = client.readBytes(buffer, imageSize < sizeof(buffer) ? imageSize : sizeof(buffer));
             if (len <= 0) {
@@ -187,12 +207,13 @@ void loop() {
             }
             imageFile.write(buffer, len);
             imageSize -= len;
-            Serial.print("Bloc ");
-            i++;
+            /* Serial.print("Bloc ");
             Serial.print(i);
             Serial.println(" image sauvegardée sur la carte SD");
             Serial.print("Taille restante: ");
-            Serial.println(imageSize);
+            Serial.println(imageSize); */
+            i++;
+            Serial.printf("Bloc %d image sauvegardé sur la carte SD\n Taille restante: %d ",i,imageSize);
             if (imageSize == 0) {
               Serial.println("Image recues avec succès");
               Serial.println(Firebase.ready());
@@ -323,4 +344,90 @@ String timestampToDateString(unsigned long timestamp) {
   std::tm *timeinfo = std::localtime(&seconds);
   std::strftime(buffer, 80, "%d-%m-%y %H-%M-%S", timeinfo);
   return String(buffer);
+}
+void listDir(const char *dirname) {
+  Serial.printf("Listing directory: %s\n", dirname);
+
+  Dir root = LittleFS.openDir(dirname);
+
+  while (root.next()) {
+    File file = root.openFile("r");
+    Serial.print("  FILE: ");
+    Serial.print(root.fileName());
+    Serial.print("  SIZE: ");
+    Serial.print(file.size());
+    time_t cr = file.getCreationTime();
+    time_t lw = file.getLastWrite();
+    file.close();
+    struct tm *tmstruct = localtime(&cr);
+    Serial.printf("    CREATION: %d-%02d-%02d %02d:%02d:%02d\n", (tmstruct->tm_year) + 1900, (tmstruct->tm_mon) + 1, tmstruct->tm_mday, tmstruct->tm_hour, tmstruct->tm_min, tmstruct->tm_sec);
+    tmstruct = localtime(&lw);
+    Serial.printf("  LAST WRITE: %d-%02d-%02d %02d:%02d:%02d\n", (tmstruct->tm_year) + 1900, (tmstruct->tm_mon) + 1, tmstruct->tm_mday, tmstruct->tm_hour, tmstruct->tm_min, tmstruct->tm_sec);
+  }
+}
+
+
+void readFile(const char *path) {
+  Serial.printf("Reading file: %s\n", path);
+
+  File file = LittleFS.open(path, "r");
+  if (!file) {
+    Serial.println("Failed to open file for reading");
+    return;
+  }
+
+  Serial.print("Read from file: ");
+  while (file.available()) { Serial.write(file.read()); }
+  file.close();
+}
+
+void writeFile(const char *path, const char *message) {
+  Serial.printf("Writing file: %s\n", path);
+
+  File file = LittleFS.open(path, "w");
+  if (!file) {
+    Serial.println("Failed to open file for writing");
+    return;
+  }
+  if (file.print(message)) {
+    Serial.println("File written");
+  } else {
+    Serial.println("Write failed");
+  }
+  delay(2000);  // Make sure the CREATE and LASTWRITE times are different
+  file.close();
+}
+
+void appendFile(const char *path, const char *message) {
+  Serial.printf("Appending to file: %s\n", path);
+
+  File file = LittleFS.open(path, "a");
+  if (!file) {
+    Serial.println("Failed to open file for appending");
+    return;
+  }
+  if (file.print(message)) {
+    Serial.println("Message appended");
+  } else {
+    Serial.println("Append failed");
+  }
+  file.close();
+}
+
+void renameFile(const char *path1, const char *path2) {
+  Serial.printf("Renaming file %s to %s\n", path1, path2);
+  if (LittleFS.rename(path1, path2)) {
+    Serial.println("File renamed");
+  } else {
+    Serial.println("Rename failed");
+  }
+}
+
+void deleteFile(const char *path) {
+  Serial.printf("Deleting file: %s\n", path);
+  if (LittleFS.remove(path)) {
+    Serial.println("File deleted");
+  } else {
+    Serial.println("Delete failed");
+  }
 }
