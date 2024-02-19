@@ -41,8 +41,6 @@ File imageFile;
 
 //Pour la sérialisation
 DynamicJsonDocument jsonMessage(1024);
-DynamicJsonDocument outgoingJsonMessage(1024);
-String outgoingMessage = "";
 String imagesFolder = "/espImages";
 
 WiFiServer server(80);
@@ -60,7 +58,8 @@ bool taskCompleted = false;
 
 //Serveur NTP
 WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP, "pool.ntp.org", 3600, 60000);  // Le décalage est en secondes (3600 pour GMT+1)
+NTPClient timeClient(ntpUDP, "europe.pool.ntp.org", 3600, 60000);
+String timestampToDateString(unsigned long timestamp);
 String date;
 /* 
 *
@@ -98,8 +97,8 @@ void setup() {
   Serial.println(WiFi.localIP());
   //Activation du timeClient
   timeClient.begin();
-  /* timeClient.update();
-  date = timestampToDateString(timeClient.getEpochTime());
+
+  /*
   lcd.clear();
   lcd.setCursor(0, 1);
   Serial.println(date); */
@@ -132,12 +131,15 @@ void setup() {
 }
 
 void loop() {
+  /*if(!timeClient.update()){
+    Serial.println("Échec de mise à jour du client NTP");
+  }*/
   timeClient.update();
-  date = timestampToDateString(timeClient.getEpochTime());
-  /* lcd.clear();
-  lcd.setCursor(0, 1);
-  Serial.println(date);
-  lcd.print(date); */
+  unsigned long seconds = timeClient.getEpochTime();
+  date = timestampToDateString(seconds);
+  /* Serial.println(timeClient.getFormattedTime());
+  Serial.println(seconds);
+  Serial.println(date); */
   WiFiClient client = server.available();
   if (Serial.available() > 0) {
     command = Serial.readStringUntil('\n');
@@ -174,6 +176,7 @@ void loop() {
           return;
         }
         String action = jsonMessage["action"];
+        String ipAdress = jsonMessage["ip"];
         if (action == "imageEsp") {
           /*Traitement de la reception de l'image*/
           String filename = jsonMessage["filename"];
@@ -183,10 +186,9 @@ void loop() {
           Serial.println("date");
           String image = imagesFolder + "/" + date + ".jpeg";
           Serial.println(image);
-          Serial.println(image);
           imageFile = SD.open(image, FILE_WRITE);
           if (!imageFile) {
-            Serial.println("Échec de l'ouverture du fichier sur la carte SD");
+            Serial.println("Échec de l'ouverture du fichier image sur la carte SD");
             client.stop();
             return;
           }
@@ -215,6 +217,7 @@ void loop() {
             i++;
             Serial.printf("Bloc %d image sauvegardé sur la carte SD\n Taille restante: %d ",i,imageSize);
             if (imageSize == 0) {
+              imageFile.close();
               Serial.println("Image recues avec succès");
               Serial.println(Firebase.ready());
               Serial.println(!taskCompleted);
@@ -224,39 +227,51 @@ void loop() {
                 destination = "/images/" + String(USER_UID) + "/" + date + ".jpeg";
                 // MIME type should be valid to avoid the download problem.
                 // The file systems for flash and SD/SDMMC can be changed in FirebaseFS.h.
-                if (Firebase.Storage.upload(&fbdo, STORAGE_BUCKET_ID /* Firebase Storage bucket id */, image /* path to local file */, mem_storage_type_sd /* memory storage type, mem_storage_type_flash and mem_storage_type_sd */, destination /* path of remote file stored in the bucket */, "image/jpeg" /* mime type */, fcsUploadCallback)) {
+                if (Firebase.Storage.upload(&fbdo, STORAGE_BUCKET_ID /* Firebase Storage bucket id */,
+                                            image /* path to local file */,
+                                            mem_storage_type_sd /* memory storage type, mem_storage_type_flash and mem_storage_type_sd */,
+                                            destination /* path of remote file stored in the bucket */,
+                                            "image/jpeg" /* mime type */,
+                                            fcsUploadCallback)) {
                   Serial.printf("\nDownload URL: %s\n", fbdo.downloadURL().c_str());
                 } else {
                   Serial.println(fbdo.errorReason());
                 }
-              }
-              if (Firebase.ready() && (millis() - dataMillis > 60000 || dataMillis == 0)) {
-                dataMillis = millis();
-                Serial.println("1");
+                /*
+                *Envoi du fichier texte sur le firebase storage
+                */
                 FirebaseJson content;
-
-                String documentPath = "requetes/";  //+ String(count);
-                Serial.println("2");
-                content.set("test", "Hello");
-                count++;
-                Serial.println("3");
-
-                Serial.print("Create a document... ");
-                Serial.println("4");
-                Serial.println(documentPath.c_str());
-                Serial.println(content.raw());
-
-                if (Firebase.Firestore.createDocument(&fbdo, FIREBASE_PROJECT_ID, "" /* databaseId can be (default) or empty */, documentPath.c_str(), content.raw())) {
-                  Serial.printf("ok\n%s\n\n", fbdo.payload().c_str());
-                  Serial.println("5");
+                content.set("description", "Nous avons détecté une intrusion dans la zone 1");
+                content.set("timestamp", seconds);
+                content.set("url", date + +".jpeg");
+                content.set("userId", USER_UID);
+                String jsonString;
+                content.toString(jsonString, true);
+                String text = imagesFolder + "/" + date + ".txt";
+                destination = "/DonneesIntrusions/" + String(USER_UID) + "/" + date + ".txt";
+                File textFile = SD.open(text, FILE_WRITE);
+                if (!textFile) {
+                  Serial.println("Échec de l'ouverture du fichier texte sur la carte SD");
+                  client.stop();
+                  return;
+                }
+                textFile.println(jsonString);
+                textFile.close();
+                if (Firebase.Storage.upload(&fbdo, STORAGE_BUCKET_ID /* Firebase Storage bucket id */,
+                                            text /* path to local file */,
+                                            mem_storage_type_sd /* memory storage type, mem_storage_type_flash and mem_storage_type_sd */,
+                                            destination /* path of remote file stored in the bucket */,
+                                            "text/txt" /* mime type */,
+                                            fcsUploadCallback)) {
+                  Serial.printf("\nDownload URL: %s\n", fbdo.downloadURL().c_str());
                 } else {
-                  Serial.println("6");
                   Serial.println(fbdo.errorReason());
                 }
-                Serial.println("7");
+                taskCompleted = false;
               }
             }
           }
+          jsonMessage.clear();
           Serial.println("sortie1");
         }
         // Ouvrir un fichier pour écrire les données d'image
