@@ -7,7 +7,7 @@ const imagesFolder = "./";
 console.log(imagesFolder);
 // Informations du serveur
 const serverHost = "192.168.3.132"; // Remplacez par l'adresse IP de votre serveur
-const serverPort = 80; // Remplacez par le port de votre serveur
+const serverPort = 8081; // Remplacez par le port de votre serveur
 
 // Création du client TCP
 const client = new net.Socket();
@@ -43,6 +43,7 @@ client.connect(serverPort, serverHost, () => {
               filename: file,
               size: data.length,
               ip: "192.168.2.124",
+			  id: "2",
               date: "10/02/2024 22h30",
             }) + "\n";
           client.write(header);

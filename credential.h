@@ -12,3 +12,4 @@
 #define PASS "925D42A7" */
 #define SSID "Galaxy S20 FE 420A"
 #define PASS "gatogordo"
+#define PORT 8081

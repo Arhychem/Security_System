@@ -38,12 +38,14 @@ const char *ssid = SSID;
 const char *password = PASS;
 File root;
 File imageFile;
+File textFile;
+bool isSDFunctionning = true;
 
 //Pour la sérialisation
 DynamicJsonDocument jsonMessage(1024);
 String imagesFolder = "/espImages";
 
-WiFiServer server(80);
+WiFiServer server(PORT);
 String command;
 
 // Initialisation firebase
@@ -53,6 +55,9 @@ FirebaseConfig configF;
 String destination;
 unsigned long dataMillis = 0;
 int count = 0;
+FirebaseJson content;
+FirebaseJsonData configJsonData;
+
 
 bool taskCompleted = false;
 
@@ -61,6 +66,8 @@ WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "europe.pool.ntp.org", 3600, 60000);
 String timestampToDateString(unsigned long timestamp);
 String date;
+unsigned long heureDébut;
+unsigned long heureFin;
 /* 
 *
 *Protoypes de fonctions*/
@@ -72,7 +79,7 @@ void renameFile(const char *path1, const char *path2);
 void appendFile(const char *path, const char *message);
 void writeFile(const char *path, const char *message);
 void readFile(const char *path);
-void listDir(const char *dirname);
+void listDir(const char *dirname, uint8_t levels);
 /* Fin prototypes*/
 
 //Initialisation écran
@@ -103,18 +110,26 @@ void setup() {
   lcd.setCursor(0, 1);
   Serial.println(date); */
 
-  //Initialidation de la carte SD
+  //Initialisation de la carte SD
   if (!SD.begin(4)) {
     Serial.println("Échec de l'initialisation de la carte SD");
+    isSDFunctionning = false;
+  } else {
+    Serial.println("SD card initialisation done");
+  }
+  if (!LittleFS.begin()) {
+    Serial.println("An Error has occurred while mounting LittleFS");
     return;
   }
-  Serial.println("initialisation done");
-  if (!SD.exists(imagesFolder)) {
-    if (!SD.mkdir(imagesFolder)) {
-      Serial.println("Erreur création de dossier");
-      return;
+  Serial.println("Flash initialisation done");
+  if (isSDFunctionning) {
+    if (!SD.exists(imagesFolder)) {
+      if (!SD.mkdir(imagesFolder)) {
+        Serial.println("Erreur création de dossier");
+        return;
+      }
+      Serial.println("Dossier créé avec succès");
     }
-    Serial.println("Dossier créé avec succès");
   }
 
   root = SD.open("/");
@@ -127,7 +142,8 @@ void setup() {
   configF.token_status_callback = tokenStatusCallback;
   Firebase.begin(&configF, &auth);
   Firebase.reconnectWiFi(true);
-  configF.fcs.upload_buffer_size = 512;
+  configF.fcs.upload_buffer_size = 1024;
+  configF.fcs.download_buffer_size = 2048;
 }
 
 void loop() {
@@ -141,10 +157,45 @@ void loop() {
   Serial.println(seconds);
   Serial.println(date); */
   WiFiClient client = server.available();
+  File configFile = LittleFS.open("config.txt", "w");
+  string configStr;
+  if (!configFile) {
+    Serial.println("erreur de création du ficher de configuration");
+    return;
+  }
+  String configSource = "/configs/" + String(USER_UID) + "/config.txt";
+  String configLocalPath = imagesFolder + "/config.txt";
+  /* Serial.println(configSource);
+  Serial.println(configLocalPath); */
+  if (!Firebase.Storage.download(&fbdo,
+                                 STORAGE_BUCKET_ID /* Firebase Storage bucket id */,
+                                 "/configs/" + String(USER_UID) + "/config.txt" /* path of remote file stored in the bucket */,
+                                 imagesFolder + "/config.txt" /* path to local file */,
+                                 mem_storage_type_flash /* memory storage type, mem_storage_type_flash and mem_storage_type_sd */,
+                                 fcsDownloadCallback /* callback function */)) {
+    Serial.println(fbdo.errorReason());
+  }
+  while (configFile.available()) {
+    configStr += char(file.read());
+  }
+  configFile.close();
+  content.setJsonData(configStr);
+  json.get(configJsonData,"heureDebut");
+  if(configJsonData.succes){
+    heureDebut=configJsonData.to<unsigned long>();
+  }
+  json.get(configJsonData,"heureFin");
+  if(configJsonData.succes){
+    heureFin=configJsonData.to<unsigned long>();
+  }
+
   if (Serial.available() > 0) {
     command = Serial.readStringUntil('\n');
     if (command == "list;") {
       printDirectory(root, 0);
+    }
+    if (command == "ls;") {
+      listDir("/", 1);
     }
     if (command == "showImages;") {
       int fileCount = 0;
@@ -159,6 +210,11 @@ void loop() {
       }
       delete[] fileList;
     }
+  }
+  //On reteste la carte
+  if (!SD.begin(4)) {
+    // Serial.println("Échec de l'initialisation de la carte SD");
+    isSDFunctionning = false;
   }
   if (client) {
     Serial.println("Nouveau client connecté");
@@ -176,25 +232,25 @@ void loop() {
           return;
         }
         String action = jsonMessage["action"];
+        String position = jsonMessage["position"];
         String ipAdress = jsonMessage["ip"];
         if (action == "imageEsp") {
           /*Traitement de la reception de l'image*/
-          String filename = jsonMessage["filename"];
           size_t imageSize = jsonMessage["size"];
           int i = 0;
           // imageFile = SD.open(imagesFolder + "/" + filename, FILE_WRITE);
           Serial.println("date");
           String image = imagesFolder + "/" + date + ".jpeg";
           Serial.println(image);
-          imageFile = SD.open(image, FILE_WRITE);
-          if (!imageFile) {
-            Serial.println("Échec de l'ouverture du fichier image sur la carte SD");
-            client.stop();
-            return;
+          if (isSDFunctionning) {
+            imageFile = SD.open(image, FILE_WRITE);
+            if (!imageFile) {
+              Serial.println("Échec de l'ouverture du fichier image sur la carte SD");
+            }
           }
-          File imageInFlash = LittleFS.open(path,"w")
+          File imageInFlash = LittleFS.open(image, "w");
           if (!imageInFlash) {
-            Serial.println("Échec de l'ouverture du fichier sur la mémoire flash");
+            Serial.println("Échec de l'ouverture du fichier image sur la mémoire flash");
             client.stop();
             return;
           }
@@ -207,17 +263,18 @@ void loop() {
               Serial.println("Erreur de lecture de l'image");
               break;  // Erreur de lecture ou connexion fermée
             }
-            imageFile.write(buffer, len);
+            if (isSDFunctionning) {
+              imageFile.write(buffer, len);
+            }
+            imageInFlash.write(buffer, len);
             imageSize -= len;
-            /* Serial.print("Bloc ");
-            Serial.print(i);
-            Serial.println(" image sauvegardée sur la carte SD");
-            Serial.print("Taille restante: ");
-            Serial.println(imageSize); */
             i++;
-            Serial.printf("Bloc %d image sauvegardé sur la carte SD\n Taille restante: %d ",i,imageSize);
+            Serial.printf("Bloc %d image sauvegardée sur la carte SD\n Quantité restante: %d\n ", i, imageSize);
             if (imageSize == 0) {
-              imageFile.close();
+              if (isSDFunctionning) {
+                imageFile.close();
+              }
+              imageInFlash.close();
               Serial.println("Image recues avec succès");
               Serial.println(Firebase.ready());
               Serial.println(!taskCompleted);
@@ -229,7 +286,7 @@ void loop() {
                 // The file systems for flash and SD/SDMMC can be changed in FirebaseFS.h.
                 if (Firebase.Storage.upload(&fbdo, STORAGE_BUCKET_ID /* Firebase Storage bucket id */,
                                             image /* path to local file */,
-                                            mem_storage_type_sd /* memory storage type, mem_storage_type_flash and mem_storage_type_sd */,
+                                            mem_storage_type_flash /* memory storage type, mem_storage_type_flash and mem_storage_type_sd */,
                                             destination /* path of remote file stored in the bucket */,
                                             "image/jpeg" /* mime type */,
                                             fcsUploadCallback)) {
@@ -240,7 +297,6 @@ void loop() {
                 /*
                 *Envoi du fichier texte sur le firebase storage
                 */
-                FirebaseJson content;
                 content.set("description", "Nous avons détecté une intrusion dans la zone 1");
                 content.set("timestamp", seconds);
                 content.set("url", date + +".jpeg");
@@ -249,17 +305,27 @@ void loop() {
                 content.toString(jsonString, true);
                 String text = imagesFolder + "/" + date + ".txt";
                 destination = "/DonneesIntrusions/" + String(USER_UID) + "/" + date + ".txt";
-                File textFile = SD.open(text, FILE_WRITE);
-                if (!textFile) {
-                  Serial.println("Échec de l'ouverture du fichier texte sur la carte SD");
+                if (isSDFunctionning) {
+                  textFile = SD.open(text, FILE_WRITE);
+                  if (!textFile) {
+                    Serial.println("Échec de l'ouverture du fichier texte sur la carte SD");
+                    client.stop();
+                    return;
+                  }
+                  textFile.println(jsonString);
+                  textFile.close();
+                }
+                File textInFlash = LittleFS.open(text, "w");
+                if (!textInFlash) {
+                  Serial.println("Échec de l'ouverture du fichier texte sur la mémoire flash");
                   client.stop();
                   return;
                 }
-                textFile.println(jsonString);
-                textFile.close();
+                textInFlash.println(jsonString);
+                textInFlash.close();
                 if (Firebase.Storage.upload(&fbdo, STORAGE_BUCKET_ID /* Firebase Storage bucket id */,
                                             text /* path to local file */,
-                                            mem_storage_type_sd /* memory storage type, mem_storage_type_flash and mem_storage_type_sd */,
+                                            mem_storage_type_flash /* memory storage type, mem_storage_type_flash and mem_storage_type_sd */,
                                             destination /* path of remote file stored in the bucket */,
                                             "text/txt" /* mime type */,
                                             fcsUploadCallback)) {
@@ -267,6 +333,8 @@ void loop() {
                 } else {
                   Serial.println(fbdo.errorReason());
                 }
+                deleteFile(image.c_str());
+                deleteFile(text.c_str());
                 taskCompleted = false;
               }
             }
@@ -360,7 +428,7 @@ String timestampToDateString(unsigned long timestamp) {
   std::strftime(buffer, 80, "%d-%m-%y %H-%M-%S", timeinfo);
   return String(buffer);
 }
-void listDir(const char *dirname) {
+/* void listDir(const char *dirname) {
   Serial.printf("Listing directory: %s\n", dirname);
 
   Dir root = LittleFS.openDir(dirname);
@@ -378,6 +446,34 @@ void listDir(const char *dirname) {
     Serial.printf("    CREATION: %d-%02d-%02d %02d:%02d:%02d\n", (tmstruct->tm_year) + 1900, (tmstruct->tm_mon) + 1, tmstruct->tm_mday, tmstruct->tm_hour, tmstruct->tm_min, tmstruct->tm_sec);
     tmstruct = localtime(&lw);
     Serial.printf("  LAST WRITE: %d-%02d-%02d %02d:%02d:%02d\n", (tmstruct->tm_year) + 1900, (tmstruct->tm_mon) + 1, tmstruct->tm_mday, tmstruct->tm_hour, tmstruct->tm_min, tmstruct->tm_sec);
+  }
+} */
+
+void listDir(const char *dirname, uint8_t levels) {
+  if (levels == 0) {
+    return;
+  }
+
+  Serial.printf("Listing directory: %s\n", dirname);
+
+  Dir root = LittleFS.openDir(dirname);
+
+  while (root.next()) {
+    File file = root.openFile("r");
+    if (file.isDirectory()) {
+      Serial.print("  DIR : ");
+      Serial.println(root.fileName());
+      // Construct the path for the subdirectory and call listDir recursively
+      String subDirPath = String(dirname) + "/" + root.fileName();
+      listDir(subDirPath.c_str(), levels - 1);  // Decrease the level
+    } else {
+      Serial.print("  FILE: ");
+      Serial.print(root.fileName());
+      Serial.print("  SIZE: ");
+      Serial.println(file.size());
+      // ... (rest of the code to print file details)
+    }
+    file.close();
   }
 }
 
@@ -444,5 +540,16 @@ void deleteFile(const char *path) {
     Serial.println("File deleted");
   } else {
     Serial.println("Delete failed");
+  }
+}
+void fcsDownloadCallback(FCS_DownloadStatusInfo info) {
+  if (info.status == firebase_fcs_download_status_init) {
+    Serial.printf("Downloading file %s (%d) to %s\n", info.remoteFileName.c_str(), info.fileSize, info.localFileName.c_str());
+  } else if (info.status == firebase_fcs_download_status_download) {
+    Serial.printf("Downloaded %d%s, Elapsed time %d ms\n", (int)info.progress, "%", info.elapsedTime);
+  } else if (info.status == firebase_fcs_download_status_complete) {
+    Serial.println("Download completed\n");
+  } else if (info.status == firebase_fcs_download_status_error) {
+    Serial.printf("Download failed, %s\n", info.errorMsg.c_str());
   }
 }
