@@ -47,7 +47,7 @@ const Parametres = () => {
     const fileContent = {
       userId: auth().currentUser.uid,
       DateModification: Math.floor(dateActuelle.getTime() / 1000),
-      text: "/enable_capture_photo_with_PIR"
+      text: "/enable_capture_Photo_with_PIR"
     };
   
     const fileName = `commandesTelegram.txt`; // Génère un nom de fichier unique avec une extension .txt
@@ -87,7 +87,7 @@ const Parametres = () => {
     const fileContent = {
       userId: auth().currentUser.uid,
       DateModification: Math.floor(dateActuelle.getTime() / 1000),
-      text: "/disable_capture_photo_with_PIR"
+      text: "/disable_capture_Photo_with_PIR"
     };
   
     const fileName = `commandesTelegram.txt`; // Génère un nom de fichier unique avec une extension .txt
@@ -127,7 +127,7 @@ const Parametres = () => {
     const fileContent = {
       userId: auth().currentUser.uid,
       DateModification: Math.floor(dateActuelle.getTime() / 1000),
-      text: "/enable_capture_photo_with_Flash"
+      text: "/enable_capture_Photo_With_Flash"
     };
   
     const fileName = `commandesTelegram.txt`; // Génère un nom de fichier unique avec une extension .txt
@@ -167,7 +167,7 @@ const Parametres = () => {
     const fileContent = {
       userId: auth().currentUser.uid,
       DateModification: Math.floor(dateActuelle.getTime() / 1000),
-      text: "/disable_capture_photo_with_Flash"
+      text: "/disable_capture_Photo_With_Flash"
     };
   
     const fileName = `commandesTelegram.txt`; // Génère un nom de fichier unique avec une extension .txt
