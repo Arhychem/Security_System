@@ -41,9 +41,44 @@ const Parametres = () => {
   const iconSize = 15;
   const iconColor = "white";
   const iconActive = "#efe";
+  const getFirebaseFileContent = async (filePath) => {
+    try {
+      const storageRef = firebase.storage().ref();
+      const fileRef = storageRef.child(filePath);
+      const fileSnapshot = await fileRef.getDownloadURL();
+      const downloadURL = fileSnapshot.toString();
+      
+      const response = await fetch(downloadURL);
+      if (response.ok) {
+        const fileContent = await response.text();
+        return fileContent;
+      } else {
+        throw new Error('Erreur lors de la récupération du fichier.');
+      }
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  };
+  const ifNewDateIsBetween = async (date) =>{
+      fileContent=await getFirebaseFileContent(`configs/${auth().currentUser.uid}/config.txt`)
+      response = JSON.parse(fileContent)
+      if(response.heureDebut<date && date<response.heureFin){
+        return true
+      }else{
+        return false
+      }
+  }
   const enablePhotoWithPir = async () => {
     setIsLoading(true)
     const dateActuelle = new Date()
+    console.log(dateActuelle)
+    const testActivity=await ifNewDateIsBetween(Math.floor(dateActuelle.getTime() / 1000))
+    console.log("ifNewDateIsBetween",testActivity)
+    if(!testActivity){
+      Alert.alert("Veuillez activer le système")
+      return
+    }
     const fileContent = {
       userId: auth().currentUser.uid,
       DateModification: Math.floor(dateActuelle.getTime() / 1000),
@@ -70,7 +105,6 @@ const Parametres = () => {
       console.error('Erreur lors du stockage du fichier :', error);
     }
     setIsLoading(false)
-    console.log(listItems);
     setListItems((prevListItems) => {
       return prevListItems.map((item, index) => {
         if (index === 0) { // Modifier uniquement le premier élément
@@ -84,6 +118,13 @@ const Parametres = () => {
   const disablePhotoWithPir = async () => {
     setIsLoading(true)
     const dateActuelle = new Date()
+    console.log(dateActuelle)
+    const testActivity=await ifNewDateIsBetween(Math.floor(dateActuelle.getTime() / 1000))
+    console.log("ifNewDateIsBetween",testActivity)
+    if(!testActivity){
+      Alert.alert("Veuillez activer le système")
+      return
+    }
     const fileContent = {
       userId: auth().currentUser.uid,
       DateModification: Math.floor(dateActuelle.getTime() / 1000),
@@ -110,7 +151,6 @@ const Parametres = () => {
       console.error('Erreur lors du stockage du fichier :', error);
     }
     setIsLoading(false)
-    console.log(listItems);
     setListItems((prevListItems) => {
       return prevListItems.map((item, index) => {
         if (index === 0) { // Modifier uniquement le premier élément
@@ -124,6 +164,13 @@ const Parametres = () => {
   const enablePhotoWithFlash = async () => {
     setIsLoading(true)
     const dateActuelle = new Date()
+    console.log(dateActuelle)
+    const testActivity=await ifNewDateIsBetween(Math.floor(dateActuelle.getTime() / 1000))
+    console.log("ifNewDateIsBetween",testActivity)
+    if(!testActivity){
+      Alert.alert("Veuillez activer le système")
+      return
+    }
     const fileContent = {
       userId: auth().currentUser.uid,
       DateModification: Math.floor(dateActuelle.getTime() / 1000),
@@ -150,7 +197,6 @@ const Parametres = () => {
       console.error('Erreur lors du stockage du fichier :', error);
     }
     setIsLoading(false)
-    console.log(listItems);
     setListItems((prevListItems) => {
       return prevListItems.map((item, index) => {
         if (index === 1) { // Modifier uniquement le deuxième élément
@@ -164,6 +210,13 @@ const Parametres = () => {
   const disablePhotoWithFlash = async () => {
     setIsLoading(true)
     const dateActuelle = new Date()
+    console.log(dateActuelle)
+    const testActivity=await ifNewDateIsBetween(Math.floor(dateActuelle.getTime() / 1000))
+    console.log("ifNewDateIsBetween",testActivity)
+    if(!testActivity){
+      Alert.alert("Veuillez activer le système")
+      return
+    }
     const fileContent = {
       userId: auth().currentUser.uid,
       DateModification: Math.floor(dateActuelle.getTime() / 1000),
@@ -190,7 +243,6 @@ const Parametres = () => {
       console.error('Erreur lors du stockage du fichier :', error);
     }
     setIsLoading(false)
-    console.log(listItems);
     setListItems((prevListItems) => {
       return prevListItems.map((item, index) => {
         if (index === 1) { // Modifier uniquement le deuxième élément
@@ -205,6 +257,13 @@ const Parametres = () => {
     // Votre logique de capture de photo
     setIsLoading(true)
     const dateActuelle = new Date()
+    console.log(dateActuelle)
+    const testActivity=await ifNewDateIsBetween(Math.floor(dateActuelle.getTime() / 1000))
+    console.log("ifNewDateIsBetween",testActivity)
+    if(!testActivity){
+      Alert.alert("Veuillez activer le système")
+      return
+    }
     const fileContent = {
       userId: auth().currentUser.uid,
       DateModification: Math.floor(dateActuelle.getTime() / 1000),
@@ -231,7 +290,6 @@ const Parametres = () => {
       console.error('Erreur lors du stockage du fichier :', error);
     }
     setIsLoading(false)
-    console.log(listItems);
   };
   
   const [listItems, setListItems] = useState([
