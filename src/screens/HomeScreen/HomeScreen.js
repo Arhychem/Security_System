@@ -11,7 +11,7 @@
     * - Modification    : 
 **/
 import React, { useContext, useEffect, useState, useRef } from 'react';
-import { Text, TextInput, Image, View, StyleSheet, Pressable, Modal, Alert } from 'react-native';
+import { Text, TextInput, Image, View, StyleSheet, Pressable, Modal, Alert,Dimensions } from 'react-native';
 import firebase from '@react-native-firebase/app'
 import auth from '@react-native-firebase/auth'
 import moment from 'moment';
@@ -24,6 +24,9 @@ import storage from '@react-native-firebase/storage';
 import Carousel from 'react-native-snap-carousel';
 import FontAwesome5Icon from 'react-native-vector-icons/FontAwesome5';
 import { BackHandler } from 'react-native';
+
+const width = Dimensions.get('window').width;
+
 const items = [
   {
     image: require('../../../assets/secu9.png'),
@@ -115,8 +118,8 @@ const HomeScreen = () => {
     fetchImage();
   }, []);
   const renderItem = ({ item }) => (
-    <View className="h-100 w-full" style={{ backgroundColor: 'rgba(255,255,255,1)',borderRadius: 10, padding:10 }}>
-    <Image style={{ height: '50%', width: '100%', borderBottomLeftRadius: 20, borderBottomRightRadius: 20 }} source={item.image} blurRadius={1} />
+    <View className="h-100 w-full" style={{ backgroundColor: 'rgba(250,250,250,1)',borderRadius: 10, padding:10 }}>
+    <Image style={{ height: '50%', width: '100%', borderBottomLeftRadius: 20, borderBottomRightRadius: 20,borderTopLeftRadius:20 }} source={item.image} blurRadius={1} />
     <View style={{ fontFamily: 'Helvetica',width: '100%', backgroundColor: 'transparent', borderRadius: 10, justifyContent: 'center', alignItems: 'center', padding:15 }}>
         <Text style={{ color: 'black',fontSize:16,lineHeight:26,}}>{item.description}</Text>
     </View>
@@ -212,8 +215,8 @@ const HomeScreen = () => {
         <Carousel
             data={items}
             renderItem={renderItem}
-            sliderWidth={400}
-            itemWidth={400}
+            sliderWidth={width}
+            itemWidth={width*0.95}
             autoplay
             autoplayInterval={5000}
             loop
