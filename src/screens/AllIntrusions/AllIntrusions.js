@@ -86,7 +86,7 @@ if(!firebase.apps.length){
           const folderPath = `DonneesIntrusions/${auth().currentUser.uid}/`;
           fetchFilesFromStorage(folderPath);
         }
-        requests.sort((a, b) => b.timestamp.seconds - a.timestamp.seconds)
+        requests.sort((a, b) => a.timestamp.seconds - b.timestamp.seconds)
         for(let i=0;i<requests.length;i++){
         const storageRef = storage().ref(`images/${requests[i].userId}/${requests[i].url}`);
         promises.push(storageRef.getDownloadURL());
@@ -142,7 +142,7 @@ if(!firebase.apps.length){
         // Mettre à jour le state reload pour déclencher le rechargement du composant
         setReload(true)
         setReload(false)
-      }, 10000000000); // Rafraîchir toutes les 10 secondes
+      }, 10000); // Rafraîchir toutes les 10 secondes
   
       // Nettoyer l'intervalle lorsque le composant est démonté
       return () => clearInterval(interval);

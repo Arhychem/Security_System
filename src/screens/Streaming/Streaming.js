@@ -37,9 +37,38 @@ if(!firebase.apps.length){
   }
 
 const Streaming = () => {
-  const handlePress = async () => {
-    const url = 'https://www.google.com'; // Remplacez avec l'adresse web souhaitée
-
+  const listItems=[
+    { iconName: "play-circle", label: "Visionner la caméra gauche", color: '#5C80BC', onPress: ()=>{handlePress(`streaming/${auth().currentUser.uid}/streaming1.txt`)} },
+    { iconName: "play-circle", label: "Visionner la caméra droite", color: '#5C80BC', onPress: ()=>{handlePress(`streaming/${auth().currentUser.uid}/streaming2.txt`)} },
+  ]
+  const iconSize = 15;
+  const iconColor = "white";
+  const iconActive = "#efe";
+  const [isLoading,setIsLoading]=useState(false)
+  const getFirebaseFileContent = async (filePath) => {
+    try {
+      const storageRef = firebase.storage().ref();
+      const fileRef = storageRef.child(filePath);
+      const fileSnapshot = await fileRef.getDownloadURL();
+      const downloadURL = fileSnapshot.toString();
+      
+      const response = await fetch(downloadURL);
+      if (response.ok) {
+        const fileContent = await response.text();
+        console.log("fileContent",fileContent)
+        return fileContent;
+      } else {
+        throw new Error('Erreur lors de la récupération du fichier.');
+      }
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  };
+  const handlePress = async (path) => {
+    setIsLoading(true)
+    const url = await getFirebaseFileContent(path); // Remplacez avec l'adresse web souhaitée
+    console.log("url:",url)
     // Vérifiez si l'application peut ouvrir l'URL
     const canOpen = await Linking.canOpenURL(url);
     console.log(canOpen)
@@ -48,9 +77,19 @@ const Streaming = () => {
       // Ouvrez l'URL dans le navigateur par défaut de l'appareil
       await Linking.openURL(url);
     }
+    setIsLoading(false)
   };
   return (
    <> 
+   {isLoading && (
+     <Modal visible={true} transparent animationType="fade">
+       <View style={styles.modalContainer}>
+         <View style={styles.modalContent}>
+           <Text>Chargement...</Text>
+         </View>
+       </View>
+     </Modal>
+   )}
    <ScrollView style={styles.container} showsVerticalScrollIndicator={true}>
     <Text style={styles.title}>
       Surveiller votre domicile à temps réel
@@ -59,9 +98,38 @@ const Streaming = () => {
       <Text style={styles.subtitle}>
         Garantissez la sécurité de votre domicile à distance grâce à SecureAlertApp, votre application qui vous permet de contrôler votre domicile à distance
       </Text>
-    <TouchableOpacity onPress={handlePress}>
-      <Text> Streaming</Text>
-    </TouchableOpacity>
+      <View style={{margin:190}}>
+      </View>
+    </View>
+    <View style={styles.NavContainer}>
+      <View style={styles.NavBar}>
+        {listItems.map((item, index) => (
+          <View key={index}>
+            <Pressable
+              style={styles.IconBehave}
+              android_ripple={{ borderless: true, radius: 50 }}
+              onPress={item.onPress}
+            >
+              {item.color ? (
+                <FontAwesome5Icon 
+                name={item.iconName}
+                size={iconSize}
+                color={item.color}
+                style={styles.iconStyle}
+                 />
+              ) : (
+                <FontAwesome5Icon
+                  name={item.iconName}
+                  size={iconSize}
+                  color={iconActive}
+                  style={styles.iconStyle}
+                />
+              )}
+              <Text style={styles.textActive}>{item.label}</Text>
+            </Pressable>
+          </View>
+        ))}
+      </View>
     </View>
           </ScrollView>
   </>
@@ -104,13 +172,14 @@ const styles=StyleSheet.create({
         position: 'absolute',
         alignItems: 'center',
         bottom: 0,
+        marginTop:100
     },
     NavBar: {
         flexDirection: 'row',
-        backgroundColor: '#5C80BC',
+        backgroundColor: 'white',
         width: '100%',
+        fontFamily: 'Helvetica',
         justifyContent: 'space-evenly',
-        borderRadius: 40,
         padding: 2
     },
     IconBehave: {
@@ -121,7 +190,9 @@ const styles=StyleSheet.create({
         color: 'white'
     },
     textActive:{
-        color: '#efe'
+        color: '#5C80BC',
+        fontSize:10,
+        fontFamily:'Helvetica'
     },
     iconStyle: {
         margin: 4,

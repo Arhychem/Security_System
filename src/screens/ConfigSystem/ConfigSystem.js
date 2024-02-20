@@ -42,17 +42,16 @@ const ConfigSystem = () => {
   const [hourEnd, setHourEnd] = useState(0);
   const autoConfig = async () => {
     setIsLoading(true);
-  
+    const dateActuelle = new Date()
     const fileContent = {
       userId: auth().currentUser.uid,
-      heureDebut: new Date(),
-      heureFin: moment('31/12/2024 00:00:00', 'DD/MM/YYYY HH:mm:ss').format('YYYY-MM-DDTHH:mm:ss.SSS[Z]'),
-      heureFin: selectedDateTimeEnd,
+      heureDebut: Math.floor(dateActuelle.getTime() / 1000),
+      heureFin: Math.floor(dateActuelle.getTime() / 1000 + 604800), //on ajoute une semaine
     };
   
     const fileName = `config.txt`; // Génère un nom de fichier unique avec une extension .txt
   
-    const folderRef = firebase.storage().ref().child('configs');
+    const folderRef = firebase.storage().ref().child(`configs/${auth().currentUser.uid}/`);
   
     try {
       // Obtient la liste des fichiers dans le dossier
@@ -75,9 +74,14 @@ const ConfigSystem = () => {
   const [selectedDateTimeBegin, setSelectedDateTimeBegin] = useState(new Date());
   const [selectedDateTimeEnd, setSelectedDateTimeEnd] = useState(new Date());
   const [isLoading, setIsLoading] = useState(false)
+  const [open1, setOpen1] = useState(false)
+  const [open2, setOpen2] = useState(false)
 
-  const handleDateTimeChange = (datetime) => {
+  const handleDateTimeChangeBegin = (datetime) => {
     setSelectedDateTimeBegin(datetime);
+  };
+  const handleDateTimeChangeEnd = (datetime) => {
+    setSelectedDateTimeEnd(datetime);
   };
   const iconSize = 24;
   const iconColor = "white";
@@ -95,17 +99,17 @@ const ConfigSystem = () => {
   }
   const applyChange = async () => {
     setIsLoading(true);
-  
+    const dateActuelle = new Date()
     const fileContent = {
       userId: auth().currentUser.uid,
-      DateModification: new Date(),
-      heureDebut: selectedDateTimeBegin,
-      heureFin: selectedDateTimeEnd,
+      DateModification:  Math.floor(dateActuelle.getTime() / 1000),
+      heureDebut:  Math.floor(selectedDateTimeBegin.getTime() / 1000),
+      heureFin: Math.floor(selectedDateTimeEnd.getTime() / 1000),
     };
   
     const fileName = `config.txt`; // Génère un nom de fichier unique avec une extension .txt
   
-    const folderRef = firebase.storage().ref().child('configs');
+    const folderRef = firebase.storage().ref().child(`configs/${auth().currentUser.uid}/`);
   
     try {
       // Obtient la liste des fichiers dans le dossier
@@ -125,7 +129,7 @@ const ConfigSystem = () => {
   
     setIsLoading(false);
   };
-  const listItems=[{iconName: "cog", label:"Configuration automatique"}]
+  const listItems=[{iconName: "cog", label:"Configuration automatique", color:'#5C80BC'}]
   return (
    <> 
    {isLoading && (
@@ -138,87 +142,131 @@ const ConfigSystem = () => {
      </Modal>
    )}
    <ScrollView style={styles.container} showsVerticalScrollIndicator={true}>
-    <Text style={styles.title}>
-      Configurer Secure Alert
-    </Text>
-    <View style={styles.root}>
-      <Text style={styles.subtitle}>
-        Garantissez la sécurité de votre domicile à distance grâce à SecureAlertApp, votre application qui vous permet de contrôler votre domicile à distance
-      </Text>
-
-    </View>
-    <View style={styles.zoneTexte}>  
-    <View>
-      <Text style={{fontSize:18, fontWeight:'bold', color:'#051C60'}}>Sélectionnez une heure pour la mise en marche du système</Text>
-      <DatePicker
-        style={{ width: 200 }}
-        date={selectedDateTimeBegin}
-        mode="datetime"
-        placeholder="Sélectionnez une heure pour la mise en marche du système"
-        format="HH:mm"
-        onDateChange={handleDateTimeChange}
-      />
-      <Text style={{fontSize:18, fontWeight:'bold', color:'#051C60'}}>Sélectionnez une heure à laquelle le système va s'éteindre</Text>
-      <DatePicker
-        style={{ width: 200 }}
-        date={selectedDateTimeEnd}
-        mode="datetime"
-        placeholder="Sélectionnez une heure à laquelle le système va s'éteindre"
-        format="HH:mm"
-        onDateChange={handleDateTimeChange}
-      />
-    </View>
-    <Text>La configuration automatique laisse le système actif entre la date à laquelle on presse le bouton et le 31/12/ de l'année en cours</Text>
-    <View style={{width:'80%', alignItems:'center', margin:65}}>
-    <CustomButton
-     text="Appliquer les modifications"
-     onPress={applyChange} 
-     type="container_PRIMARY"
-     typeT="text_PRIMARY"
-     />
+     <View style={styles.parentRoot}>
+       <View style={styles.root}>
+         <View style={styles.subroot}>
+           <Text style={styles.title}>
+           Configuration manuelle du temps de fontionnement
+           </Text>
+           <View style={styles.zoneTexte}>  
+           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+             <View style={{ flex:1 , paddingRight:10}}>
+               <Button title="DATE MARCHE" onPress={() => setOpen1(true)} style={{fontSize:18, fontWeight:'bold'}}/>
+               <DatePicker
+                 modal
+                 locale='fr'
+                 open={open1}
+                 style={{ width: 200,borderRadius:10 }}
+                 date={selectedDateTimeBegin}
+                 mode="datetime"
+                 title="Sélectionnez la date de mise en marche"
+                 format="HH:mm"
+                 onConfirm={(selectedDateTimeBegin) => {
+                   setOpen1(false)
+                   setSelectedDateTimeBegin(selectedDateTimeBegin)
+                 }}
+                 onCancel={() => {
+                   setOpen1(false)
+                 }}
+                 confirmText='Confirmer'
+                 cancelText='Annuler'
+               />
+               <Text>{selectedDateTimeBegin.toDateString()}</Text>
+             </View>
+             <View style={{ flex:1 }}>
+               <Button title="DATE ARRET" onPress={() => setOpen2(true)} style={{fontSize:18, fontWeight:'bold'}}/>
+               <DatePicker
+                 modal
+                 locale='fr'
+                 open={open2}
+                 style={{ width: 200,borderRadius:10 }}
+                 date={selectedDateTimeEnd}
+                 minimumDate={selectedDateTimeBegin}
+                 mode="datetime"
+                 title="Sélectionnez la date de mise en arret"
+                 format="HH:mm"
+                 onConfirm={(selectedDateTimeEnd) => {
+                   setOpen2(false)
+                   setSelectedDateTimeEnd(selectedDateTimeEnd)
+                 }}
+                 onCancel={() => {
+                   setOpen2(false)
+                 }}
+                 confirmText='Confirmer' 
+                 cancelText='Annuler'
+               />
+               <Text>{selectedDateTimeEnd.toDateString()}</Text>
+             </View>
+           </View>
+           <CustomButton
+             text="Appliquer les modifications"
+             onPress={applyChange} 
+             type="container_PRIMARY"
+             typeT="text_PRIMARY"
+           />
+           </View>
+         </View>
+         <View style={styles.subroot1}>
+           <View style={styles.NavBar}>
+             {listItems.map((item, index) => (
+               <View key={index}>
+                 <Pressable
+                   style={styles.IconBehave}
+                   android_ripple={{ borderless: true, radius: 50 }}
+                   onPress={autoConfig}
+                 >
+                   {item.color ? (
+                     <FontAwesome5Icon 
+                     name={item.iconName}
+                     size={iconSize}
+                     color={item.color}
+                     style={styles.iconStyle}
+                     />
+                   ) : (
+                     <FontAwesome5Icon
+                       name={item.iconName}
+                       size={iconSize}
+                       color={iconActive}
+                       style={styles.iconStyle}
+                     />
+                   )}
+                   <Text style={styles.textActive}>{item.label}</Text>
+                 </Pressable>
+               </View>
+             ))}
+           </View>
+         </View>
+       </View> 
      </View>
-    </View>
-    <View style={styles.NavContainer}>
-      <View style={styles.NavBar}>
-        {listItems.map((item, index) => (
-          <View key={index}>
-            <Pressable
-              style={styles.IconBehave}
-              android_ripple={{ borderless: true, radius: 50 }}
-              onPress={autoConfig}
-            >
-              {item.color ? (
-                <FontAwesome5Icon 
-                name={item.iconName}
-                size={iconSize}
-                color={item.color}
-                style={styles.iconStyle}
-                 />
-              ) : (
-                <FontAwesome5Icon
-                  name={item.iconName}
-                  size={iconSize}
-                  color={iconActive}
-                  style={styles.iconStyle}
-                />
-              )}
-              <Text style={styles.textActive}>{item.label}</Text>
-            </Pressable>
-          </View>
-        ))}
-      </View>
-    </View>
-          </ScrollView>
+   </ScrollView>
   </>
   )
 }
 const styles=StyleSheet.create({
-    root:{
-        alignItems:'center',
-        padding: 20,
-    },
+  root:{
+    alignItems:'center',
+    padding: 20,
+    backgroundColor: 'white',
+    shadowColor: '#000',
+    shadowOffset: {width:10, height:20},
+    shadowOpacity: 0.8,
+    elevation: 10, 
+  },
+  parentRoot:{
+    padding:20,
+    paddingTop:100,
+  },
+  subroot:{
+    alignItems:'center',
+    backgroundColor: 'white',
+  },
+  subroot1:{
+    alignItems:'center',
+    width:"100%",
+    paddingTop:30,
+  },
     title:{
-        fontSize:24,
+        fontSize:15,
         fontWeight:'bold',
         color:'#051C60',
         margin: 10,
@@ -252,10 +300,10 @@ const styles=StyleSheet.create({
     },
     NavBar: {
         flexDirection: 'row',
-        backgroundColor: '#5C80BC',
+        backgroundColor: 'white',
         width: '100%',
+        fontFamily: 'Helvetica',
         justifyContent: 'space-evenly',
-        borderRadius: 40,
         padding: 2
     },
     IconBehave: {
@@ -266,7 +314,9 @@ const styles=StyleSheet.create({
         color: 'white'
     },
     textActive:{
-        color: '#efe'
+        color: '#5C80BC',
+        fontSize:10,
+        fontFamily:'Helvetica'
     },
     iconStyle: {
         margin: 4,

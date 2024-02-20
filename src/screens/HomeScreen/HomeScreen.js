@@ -88,7 +88,7 @@ if(!firebase.apps.length){
     messagingSenderId: '82701150011 ',
   })
   }
-  const iconSize = 24;
+  const iconSize = 15;
   const iconColor = "white";
   const iconActive = "#efe";
 
@@ -117,7 +117,7 @@ const HomeScreen = () => {
   const renderItem = ({ item }) => (
     <View className="h-100 w-full" style={{ backgroundColor: 'rgba(255,255,255,1)',borderRadius: 10, padding:10 }}>
     <Image style={{ height: '50%', width: '100%', borderBottomLeftRadius: 20, borderBottomRightRadius: 20 }} source={item.image} blurRadius={1} />
-    <View style={{ height: '30%', width: '100%', backgroundColor: 'transparent', borderRadius: 10, justifyContent: 'center', alignItems: 'center' }}>
+    <View style={{ fontFamily: 'Helvetica',width: '100%', backgroundColor: 'transparent', borderRadius: 10, justifyContent: 'center', alignItems: 'center', padding:15 }}>
         <Text style={{ color: 'black',fontSize:16,lineHeight:26,}}>{item.description}</Text>
     </View>
     </View>
@@ -131,16 +131,17 @@ const HomeScreen = () => {
   }
   const activeSystem = async () => {
     setIsLoading(true);
-  
+    const dateActuelle = new Date()
     const fileContent = {
       userId: auth().currentUser.uid,
-      DateModification: moment(firebase.firestore.FieldValue.serverTimestamp()).toDate(),
-      heureActivation: new Date(),
+      DateModification: Math.floor(dateActuelle.getTime() / 1000),
+      heureDebut: Math.floor(dateActuelle.getTime() / 1000),
+      heureFin: Math.floor(dateActuelle.getTime() / 1000 + 3600),//j'ajoute approximativement une semaine
     };
   
-    const fileName = `enable.txt`; // Génère un nom de fichier unique avec une extension .txt
+    const fileName = `config.txt`; // Génère un nom de fichier unique avec une extension .txt
   
-    const folderRef = firebase.storage().ref().child('activateSystem');
+    const folderRef = firebase.storage().ref().child( `configs/${auth().currentUser.uid}/`);
   
     try {
       // Obtient la liste des fichiers dans le dossier
@@ -162,16 +163,17 @@ const HomeScreen = () => {
   };
   const desactiveSystem = async () => {
     setIsLoading(true);
-  
+    const dateActuelle = new Date()
     const fileContent = {
       userId: auth().currentUser.uid,
-      DateModification: moment(firebase.firestore.FieldValue.serverTimestamp()).toDate(),
-      heureDesactivation: new Date(),
+      DateModification: Math.floor(dateActuelle.getTime() / 1000),
+      heureDebut: Math.floor(dateActuelle.getTime() / 1000  - 2),
+      heureFin: Math.floor(dateActuelle.getTime() / 1000 - 1),//j'ajoute approximativement une semaine
     };
   
-    const fileName = `disable.txt`; // Génère un nom de fichier unique avec une extension .txt
+    const fileName = `config.txt`; // Génère un nom de fichier unique avec une extension .txt
   
-    const folderRef = firebase.storage().ref().child('DisableSystem');
+    const folderRef = firebase.storage().ref().child( `configs/${auth().currentUser.uid}/`);
   
     try {
       // Obtient la liste des fichiers dans le dossier
@@ -191,7 +193,7 @@ const HomeScreen = () => {
   
     setIsLoading(false);
   };
-  const listItems=[{iconName: "power-off", label:"Activer le système", color:'white', onPress:activeSystem }, {iconName:"power-off", label:"Désactiver le système", color: 'red', onPress:desactiveSystem}]
+  const listItems=[{iconName: "power-off", label:"Activer le système", color:'#5C80BC', onPress:activeSystem }, {iconName:"power-off", label:"Désactiver le système", color: 'red', onPress:desactiveSystem}]
   return (
    <> 
    {isLoading && (
@@ -206,12 +208,7 @@ const HomeScreen = () => {
     {auth().currentUser && <Text style={styles.title}>{auth().currentUser.displayName}, Bienvenue sur Secure Alert</Text>}
     <View className="flex-1 bg-white" style={{ alignItems: 'center',
         width: '100%',
-        height: '94%',}}>
-        <Image
-        source={require('../../../assets/background.png')}
-        style={styles.image}
-        blurRadius={40}
-      />
+        height: '94%', padding: 10}}>
         <Carousel
             data={items}
             renderItem={renderItem}
@@ -320,10 +317,10 @@ const styles=StyleSheet.create({
     },
     NavBar: {
         flexDirection: 'row',
-        backgroundColor: '#5C80BC',
+        backgroundColor: 'white',
         width: '100%',
+        fontFamily: 'Helvetica',
         justifyContent: 'space-evenly',
-        borderRadius: 40,
         padding: 2
     },
     IconBehave: {
@@ -334,7 +331,9 @@ const styles=StyleSheet.create({
         color: 'white'
     },
     textActive:{
-        color: '#efe'
+        color: '#5C80BC',
+        fontSize:10,
+        fontFamily:'Helvetica'
     },
     iconStyle: {
         margin: 4,

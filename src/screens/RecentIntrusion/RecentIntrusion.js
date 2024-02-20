@@ -144,7 +144,7 @@ if(!firebase.apps.length){
         // Mettre à jour le state reload pour déclencher le rechargement du composant
         setReload(true)
         setReload(false)
-      }, 1000000); // Rafraîchir toutes les 10 secondes
+      }, 10000); // Rafraîchir toutes les 10 secondes
   
       // Nettoyer l'intervalle lorsque le composant est démonté
       return () => clearInterval(interval);

@@ -26,6 +26,7 @@ import ForgotPassword from "../../screens/ForgotPassword";
 import ConfigurationUpScreen from "../../screens/ConfigurationUpScreen/ConfigurationUpScreen";
 import RecentIntrusion from "../../screens/RecentIntrusion/RecentIntrusion";
 import Streaming from "../../screens/Streaming/Streaming";
+import Parametres from "../../screens/Parametres/Parametres";
 const StackNav = () => {
     const Drawer = createDrawerNavigator();
     const navigation = useNavigation();
@@ -100,6 +101,13 @@ const StackNav = () => {
         <Drawer.Screen 
           name="Streaming" 
           component={Streaming} 
+          options={{
+            headerShown: true,
+          }}
+        />
+        <Drawer.Screen 
+          name="Parametres" 
+          component={Parametres} 
           options={{
             headerShown: true,
           }}
