@@ -37,6 +37,7 @@ if(!firebase.apps.length){
   }
 
 const Streaming = () => {
+  const [isActive,setIsActive]=useState(false)
   const listItems=[
     { iconName: "play-circle", label: "Visionner la caméra gauche", color: '#5C80BC', onPress: ()=>{handlePress(`streaming/${auth().currentUser.uid}/streaming1.txt`)} },
     { iconName: "play-circle", label: "Visionner la caméra droite", color: '#5C80BC', onPress: ()=>{handlePress(`streaming/${auth().currentUser.uid}/streaming2.txt`)} },
@@ -65,6 +66,30 @@ const Streaming = () => {
       throw error;
     }
   };
+  const ifNewDateIsBetween = async (date) =>{
+      fileContent=await getFirebaseFileContent(`configs/${auth().currentUser.uid}/config.txt`)
+      response = JSON.parse(fileContent)
+      if(response.heureDebut<date && date<response.heureFin){
+        return true
+      }else{
+        return false
+      }
+  }
+useEffect(() => {
+  const fetchData = async () => {
+    const dateActuelle = new Date();
+    console.log(dateActuelle);
+    const testActivity = await ifNewDateIsBetween(Math.floor(dateActuelle.getTime() / 1000));
+    console.log("testActivity",testActivity)
+    setIsActive(testActivity);
+  };
+
+  const interval = setInterval(fetchData, 10000);
+
+  return () => {
+    clearInterval(interval);
+  };
+}, []);
   const handlePress = async (path) => {
     setIsLoading(true)
     const url = await getFirebaseFileContent(path); // Remplacez avec l'adresse web souhaitée
@@ -98,7 +123,8 @@ const Streaming = () => {
       <Text style={styles.subtitle}>
         Garantissez la sécurité de votre domicile à distance grâce à SecureAlertApp, votre application qui vous permet de contrôler votre domicile à distance
       </Text>
-      <View style={{margin:190}}>
+      <Text style={styles.subtitle}>{isActive ? 'Système activé' : 'Système désactivé'}</Text>
+      <View style={{margin:170}}>
       </View>
     </View>
     <View style={styles.NavContainer}>
