@@ -121,7 +121,7 @@ const HomeScreen = () => {
     <View className="h-100 w-full" style={{ backgroundColor: 'rgba(250,250,250,1)',borderRadius: 10, padding:10 }}>
     <Image style={{ height: '50%', width: '100%', borderBottomLeftRadius: 20, borderBottomRightRadius: 20,borderTopLeftRadius:20 }} source={item.image} blurRadius={1} />
     <View style={{ fontFamily: 'Helvetica',width: '100%', backgroundColor: 'transparent', borderRadius: 10, justifyContent: 'center', alignItems: 'center', padding:15 }}>
-        <Text style={{ color: 'black',fontSize:16,lineHeight:26,}}>{item.description}</Text>
+        <Text style={{ color: 'black',fontSize:13,lineHeight:26,}}>{item.description}</Text>
     </View>
     </View>
 );
@@ -208,7 +208,7 @@ const HomeScreen = () => {
        </View>
      </Modal>
    )}
-    {auth().currentUser && <Text style={styles.title}>{auth().currentUser.displayName}, Bienvenue sur Secure Alert</Text>}
+    {auth().currentUser && <Text style={styles.title}>Bienvenue sur Secure Alert, {auth().currentUser.displayName}</Text>}
     <View className="flex-1 bg-white" style={{ alignItems: 'center',
         width: '100%',
         height: '94%', padding: 10}}>
@@ -261,7 +261,7 @@ const styles=StyleSheet.create({
         padding: 20,
     },
     title:{
-        fontSize:24,
+        fontSize:15,
         fontWeight:'bold',
         color:'#051C60',
         margin: 10,

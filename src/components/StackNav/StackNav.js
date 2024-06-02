@@ -65,17 +65,17 @@ const StackNav = () => {
           component={ConfigurationUpScreen} 
           options={{ headerShown: false }}
         />
-        <Drawer.Screen 
-          name="DrawerContent" 
-          component={DrawerContent} 
-          options={{ headerShown: false }}
-        />
         <Drawer.Screen
           name="HomeScreen"
           component={HomeScreen}
           options={{
             headerShown: true,
           }}
+        />
+        <Drawer.Screen 
+          name="DrawerContent" 
+          component={DrawerContent} 
+          options={{ headerShown: false }}
         />
         <Drawer.Screen
           name="ConfigSystem"
